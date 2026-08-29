@@ -13,7 +13,7 @@ services:
     networks: [proxy]
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.hotshelf.rule=Host(`cache.${DOMAIN}`)"
+      - "traefik.http.routers.hotshelf.rule=Host(`hotshelf.${DOMAIN}`)"
       - "traefik.http.routers.hotshelf.entrypoints=websecure"
       - "traefik.http.routers.hotshelf.middlewares=internal-only@file"
       - "traefik.http.routers.hotshelf.tls=true"

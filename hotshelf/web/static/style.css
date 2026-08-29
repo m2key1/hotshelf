@@ -48,3 +48,6 @@ legend { color: #6c7a89; font-size: 0.8rem; text-transform: uppercase;
 .settings button { align-self: flex-start; }
 summary { cursor: pointer; color: #9fb0c0; }
 details form { margin-top: 0.8rem; }
+.desc { color: #5d6b7a; font-size: 0.75rem; line-height: 1.35; }
+.settings label.check { flex-wrap: wrap; }
+.settings label.check .desc { flex-basis: 100%; margin-left: 1.6rem; }

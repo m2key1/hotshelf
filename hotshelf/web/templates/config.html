@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% macro field(label, desc) %}
+  <label>{{ label }}{{ caller() }}<span class="desc">{{ desc }}</span></label>
+{% endmacro %}
 {% block content %}
 {% set pol = cfg.policy %}
 {% set bud = cfg.budget %}
@@ -9,85 +12,83 @@
   <form method="post" action="/settings" class="settings">
     <fieldset>
       <legend>Budget</legend>
-      <label>Mode
+      {% call field("Mode", "Cap the cache by total size or by item count.") %}
         <select name="budget_mode">
           <option value="size" {{ "selected" if bud.mode == "size" }}>by size</option>
           <option value="count" {{ "selected" if bud.mode == "count" }}>by count</option>
-        </select>
-      </label>
-      <label>Size (GB, 0 = no limit)
-        <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="0"></label>
-      <label>Max series (0 = no limit)
-        <input type="number" name="max_series" value="{{ bud.max_series }}" min="0"></label>
-      <label>Max movies (0 = no limit)
-        <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0"></label>
+        </select>{% endcall %}
+      {% call field("Size (GB)", "Total space the cache may use. 0 = no limit.") %}
+        <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="0">{% endcall %}
+      {% call field("Max series", "Series kept hot at once in count mode. 0 = no limit.") %}
+        <input type="number" name="max_series" value="{{ bud.max_series }}" min="0">{% endcall %}
+      {% call field("Max movies", "Movies kept hot at once in count mode. 0 = no limit.") %}
+        <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0">{% endcall %}
     </fieldset>
     <fieldset>
       <legend>Policy</legend>
-      <label>Activity window (days)
-        <input type="number" name="activity_window_days" value="{{ pol.activity_window_days }}" min="1"></label>
-      <label>Preload
+      {% call field("Activity window (days)", "A series counts as active if someone watched it within this many days.") %}
+        <input type="number" name="activity_window_days" value="{{ pol.activity_window_days }}" min="1">{% endcall %}
+      {% call field("Preload", "How far ahead each active series is staged on NVMe.") %}
         <select name="episodes_ahead">
           {% for opt in ["1", "2", "3", "5", "10", "season", "series"] %}
           <option value="{{ opt }}" {{ "selected" if pol.episodes_ahead | string == opt }}>
             {{ opt if opt in ["season", "series"] else opt + " episodes" }}</option>
           {% endfor %}
-        </select>
-      </label>
-      <label>Resume items
+        </select>{% endcall %}
+      {% call field("Resume items", "Half-watched items: cache only recently played ones, all of them, or none.") %}
         <select name="resume">
           <option value="recent" {{ "selected" if pol.resume == "recent" }}>recent only</option>
           <option value="always" {{ "selected" if pol.resume == "always" }}>always</option>
           <option value="off" {{ "selected" if pol.resume == "off" }}>off</option>
-        </select>
-      </label>
-      <label>Fresh imports
+        </select>{% endcall %}
+      {% call field("Fresh imports", "New downloads land on NVMe; keep them hot or move them off next run.") %}
         <select name="fresh_imports">
           <option value="keep" {{ "selected" if pol.fresh_imports == "keep" }}>keep on NVMe</option>
           <option value="demote" {{ "selected" if pol.fresh_imports == "demote" }}>demote next run</option>
-        </select>
-      </label>
-      <label>Fresh kept (days)
-        <input type="number" name="fresh_keep_days" value="{{ pol.fresh_keep_days }}" min="1"></label>
-      <label>Watched grace (days)
-        <input type="number" name="watched_grace_days" value="{{ pol.watched_grace_days }}" min="0"></label>
-      <label>Users (empty = all)
-        <input type="text" name="users" value="{{ pol.users | join(', ') }}" placeholder="all"></label>
+        </select>{% endcall %}
+      {% call field("Fresh kept (days)", "How long unwatched new imports stay hot.") %}
+        <input type="number" name="fresh_keep_days" value="{{ pol.fresh_keep_days }}" min="1">{% endcall %}
+      {% call field("Watched grace (days)", "Keep just-watched episodes this long, for others catching up. 0 = off.") %}
+        <input type="number" name="watched_grace_days" value="{{ pol.watched_grace_days }}" min="0">{% endcall %}
+      {% call field("Users", "Comma-separated Jellyfin users that count. Empty = everyone.") %}
+        <input type="text" name="users" value="{{ pol.users | join(', ') }}" placeholder="all">{% endcall %}
       <label class="check">
-        <input type="checkbox" name="move_sidecars" {{ "checked" if pol.move_sidecars }}> Move sidecar files</label>
+        <input type="checkbox" name="move_sidecars" {{ "checked" if pol.move_sidecars }}> Move sidecar files
+        <span class="desc">Subtitles and .nfo travel with their video.</span></label>
     </fieldset>
     <fieldset>
       <legend>Jellyfin</legend>
-      <label>URL <input type="text" name="jellyfin_url" value="{{ cfg.jellyfin.url }}"></label>
-      <label>Library prefix
-        <input type="text" name="union_prefix" value="{{ cfg.jellyfin.union_prefix }}"></label>
-      <label>API key
-        <input type="password" name="api_key" value="" placeholder="unchanged"></label>
+      {% call field("URL", "Jellyfin address as reachable from this container.") %}
+        <input type="text" name="jellyfin_url" value="{{ cfg.jellyfin.url }}">{% endcall %}
+      {% call field("Library prefix", "The media path as Jellyfin sees it.") %}
+        <input type="text" name="union_prefix" value="{{ cfg.jellyfin.union_prefix }}">{% endcall %}
+      {% call field("API key", "From Jellyfin Dashboard > API Keys. Blank keeps the current key.") %}
+        <input type="password" name="api_key" value="" placeholder="unchanged">{% endcall %}
     </fieldset>
     <fieldset>
       <legend>Library</legend>
-      <label>Movies directory
-        <input type="text" name="movies_dir" value="{{ cfg.library.movies_dir }}"></label>
-      <label>Video extensions
-        <input type="text" name="video_exts" value="{{ cfg.library.video_exts | join(', ') }}"></label>
+      {% call field("Movies directory", "Top-level library folder holding movies.") %}
+        <input type="text" name="movies_dir" value="{{ cfg.library.movies_dir }}">{% endcall %}
+      {% call field("Video extensions", "File types treated as media, comma-separated.") %}
+        <input type="text" name="video_exts" value="{{ cfg.library.video_exts | join(', ') }}">{% endcall %}
     </fieldset>
     <fieldset>
       <legend>Mover</legend>
-      <label>Verification
+      {% call field("Verification", "Checksum re-reads every byte before deleting the source; size is faster.") %}
         <select name="verify">
           <option value="checksum" {{ "selected" if cfg.mover.verify == "checksum" }}>checksum (safest)</option>
           <option value="size" {{ "selected" if cfg.mover.verify == "size" }}>size only (faster)</option>
-        </select>
-      </label>
-      <label>Free space margin (GB)
-        <input type="number" name="free_space_margin_gb" value="{{ cfg.mover.free_space_margin_gb }}" min="0"></label>
+        </select>{% endcall %}
+      {% call field("Free space margin (GB)", "Never fill a branch closer than this to full.") %}
+        <input type="number" name="free_space_margin_gb" value="{{ cfg.mover.free_space_margin_gb }}" min="0">{% endcall %}
     </fieldset>
     <fieldset>
       <legend>Run</legend>
-      <label>Interval (minutes)
-        <input type="number" name="interval_minutes" value="{{ cfg.run.interval_minutes }}" min="1"></label>
+      {% call field("Interval (minutes)", "Time between automatic policy runs.") %}
+        <input type="number" name="interval_minutes" value="{{ cfg.run.interval_minutes }}" min="1">{% endcall %}
       <label class="check">
-        <input type="checkbox" name="dry_run" {{ "checked" if cfg.run.dry_run }}> Dry run</label>
+        <input type="checkbox" name="dry_run" {{ "checked" if cfg.run.dry_run }}> Dry run
+        <span class="desc">Log intended moves without touching any files.</span></label>
     </fieldset>
     <button type="submit" class="primary">Save settings</button>
   </form>
