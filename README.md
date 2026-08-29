@@ -1,42 +1,99 @@
 # hotshelf
 
 Tiered media storage for Jellyfin. Keeps what the household is actually
-watching on NVMe; everything else lives on HDD. All apps see one library
-through a mergerfs union, so files move between tiers invisibly.
+watching on NVMe; everything else stays on HDD. All apps see one library
+through a mergerfs union, so files move between tiers invisibly. See
+DESIGN.md for the architecture.
 
-See DESIGN.md for the architecture and docs/host-setup.md for the one-time
-host preparation (union mount, cache dataset, volume repointing).
+## Requirements
 
-## Run
+- Jellyfin, media library on a slow pool (e.g. `/data/media`)
+- A fast filesystem for the cache (e.g. ZFS on NVMe)
+- Docker with a reverse-proxy network (optional)
+
+## Setup
+
+1. Cache dataset:
 
 ```
-cp config.example.yaml config/config.yaml   # edit: jellyfin url + api key
-docker compose -f compose.example.yaml up -d
+zfs create -o quota=200G fast/media-cache
+chown 1000:1000 /fast/media-cache
 ```
 
-Web UI on :8080 (status, plan preview, pins, config editor, activity log).
-Dry-run is on by default: the first runs only log what they would move.
-Disable it from the header once the plan looks right.
+2. Move the library aside so the union can take its path
+   (stop containers that mount it first):
 
-## Endpoints
+```
+docker stop jellyfin sonarr radarr sabnzbd
+zfs set mountpoint=/data/media-hdd media/media
+mkdir /data/media
+```
 
-- `/metrics` Prometheus
-- `/api/homepage` JSON for a Homepage customapi widget
-- `/webhook/jellyfin` POST target for the Jellyfin webhook plugin
-  (PlaybackStart): counts a cache hit or miss, then triggers a debounced
-  policy run so the next episodes stage mid-watch
+3. Union mount, `/etc/systemd/system/data-media.mount`:
 
-## Wiring the integrations
+```
+[Unit]
+Description=hotshelf media union
+After=zfs-mount.service
+Requires=zfs-mount.service
 
-Jellyfin webhook: install the Webhook plugin, add a Generic Destination with
-url `http://hotshelf:8080/webhook/jellyfin`, enable only Playback Start and
-the "Send All Properties" template.
+[Mount]
+What=/fast/media-cache:/data/media-hdd
+Where=/data/media
+Type=fuse.mergerfs
+Options=category.create=ff,moveonenospc=true,cache.files=off,dropcacheonclose=false,allow_other,use_ino
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```
+apt install mergerfs
+systemctl daemon-reload
+systemctl enable --now data-media.mount
+docker start jellyfin sonarr radarr sabnzbd
+```
+
+Every media app must mount the union path, never a branch.
+`category.create=ff` makes new downloads land on NVMe automatically.
+
+4. App:
+
+```
+git clone git@github.com:m2key1/hotshelf.git /srv/hotshelf && cd /srv/hotshelf
+mkdir config && cp config.example.yaml config/config.yaml
+```
+
+Set `jellyfin.api_key` (Jellyfin Dashboard > API Keys) in the config, check
+the volume paths in `compose.example.yaml`, then:
+
+```
+docker compose -f compose.example.yaml up -d --build
+```
+
+5. First run: open the web UI, press Run now, review Plan and Log.
+   Dry-run is on by default and only logs. Disable it from the header
+   once the plan looks right.
+
+## Integrations
+
+Jellyfin webhook (stages next episodes mid-watch, counts cache hits):
+Webhook plugin > Generic Destination > url
+`http://hotshelf:8080/webhook/jellyfin`, Playback Start only,
+Send All Properties.
+
+Prometheus:
+
+```yaml
+- job_name: hotshelf
+  static_configs:
+    - targets: ["hotshelf:8080"]
+```
 
 Homepage widget:
 
 ```yaml
 - Cache:
-    icon: mdi-harddisk
     widget:
       type: customapi
       url: http://hotshelf:8080/api/homepage
@@ -48,13 +105,11 @@ Homepage widget:
           label: items
 ```
 
-Prometheus scrape job:
+## Rollback
 
-```yaml
-- job_name: hotshelf
-  static_configs:
-    - targets: ["hotshelf:8080"]
-```
+Press Flush cache (moves everything back to HDD), stop the app, repoint the
+containers to `/data/media-hdd`, disable the mount unit, rename the
+mountpoint back.
 
 ## Tests
 
