@@ -25,17 +25,18 @@ def _sidecars(src_dir, stem):
                   if e.startswith(stem + ".") and not e.endswith(PARTIAL_SUFFIX))
 
 
-def _copy_verified(src, dst):
-    """Copy src to dst atomically, verifying size and checksum."""
+def _copy_verified(src, dst, verify, margin):
+    """Copy src to dst atomically, verifying size and optionally checksum."""
     partial = dst + PARTIAL_SUFFIX
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     free = shutil.disk_usage(os.path.dirname(dst)).free
     size = os.path.getsize(src)
-    if free < size + (1 << 30):
+    if free < size + margin:
         raise OSError(f"insufficient free space for {src}")
     try:
         shutil.copy2(src, partial)
-        if os.path.getsize(partial) != size or _checksum(partial) != _checksum(src):
+        if os.path.getsize(partial) != size or (
+                verify == "checksum" and _checksum(partial) != _checksum(src)):
             raise OSError(f"verification failed for {src}")
         os.replace(partial, dst)
     finally:
@@ -57,10 +58,13 @@ def _prune_empty_dirs(root, relpath):
 class Mover:
     """Executes promotes and demotes between the two branches."""
 
-    def __init__(self, nvme_root, hdd_root, move_sidecars=True):
+    def __init__(self, nvme_root, hdd_root, move_sidecars=True,
+                 verify="checksum", free_space_margin_gb=1):
         self.nvme_root = nvme_root
         self.hdd_root = hdd_root
         self.move_sidecars = move_sidecars
+        self.verify = verify
+        self.margin = free_space_margin_gb * 10**9
 
     def _move(self, relpath, src_root, dst_root):
         """Move one media file and its sidecars, copy-verify-delete."""
@@ -76,7 +80,7 @@ class Mover:
             if os.path.exists(file_dst) and _checksum(file_dst) == _checksum(file_src):
                 os.unlink(file_src)
                 continue
-            _copy_verified(file_src, file_dst)
+            _copy_verified(file_src, file_dst, self.verify, self.margin)
             os.unlink(file_src)
         _prune_empty_dirs(src_root, relpath)
 

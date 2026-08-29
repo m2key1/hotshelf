@@ -26,3 +26,10 @@ policy:
 run:
   interval_minutes: 15
   dry_run: true
+
+library:
+  movies_dir: movies
+
+mover:
+  verify: checksum
+  free_space_margin_gb: 1

@@ -37,12 +37,13 @@ def collect(cfg, pins):
         if episodes:
             series_list.append(Series(sid, info["name"], episodes, info["last"], next_index))
 
-    nvme_scan = scan(cfg["branches"]["nvme"])
-    hdd_scan = scan(cfg["branches"]["hdd"])
+    exts = cfg["library"]["video_exts"]
+    nvme_scan = scan(cfg["branches"]["nvme"], exts)
+    hdd_scan = scan(cfg["branches"]["hdd"], exts)
     snapshot = Snapshot(
         resume=resume,
         series=series_list,
-        movies=movie_dirs(nvme_scan, hdd_scan),
+        movies=movie_dirs(cfg["library"]["movies_dir"], nvme_scan, hdd_scan),
         nvme={rp: s for rp, (s, _) in nvme_scan.items()},
         hdd={rp: s for rp, (s, _) in hdd_scan.items()},
         nvme_mtime={rp: m for rp, (_, m) in nvme_scan.items()},
@@ -108,7 +109,8 @@ def _run(cfg, state):
     dry = cfg["run"]["dry_run"]
     snapshot, wants, promotes, demotes, warnings = compute(cfg, state)
     mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
-                  cfg["policy"]["move_sidecars"])
+                  cfg["policy"]["move_sidecars"],
+                  cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
     moved = {"promoted": 0, "demoted": 0, "failed": 0}
 
     for warning in warnings:

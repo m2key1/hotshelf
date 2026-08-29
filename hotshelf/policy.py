@@ -132,13 +132,17 @@ def desired(snapshot, cfg, pins, now=None):
                 add(rest, [Want(relpath, snapshot.nvme[relpath], PRIORITY_FRESH,
                                 REASON[PRIORITY_FRESH])])
 
-    return resume + _trim(rest, cfg["budget"], sum(w.size for w in resume))
+    budget = {**cfg["budget"],
+              "movies_dir": cfg.get("library", {}).get("movies_dir", "movies")}
+    return resume + _trim(rest, budget, sum(w.size for w in resume))
 
 
 def _trim(wants, budget, used):
     """Cut the non-resume wants down to the configured budget."""
     if budget["mode"] == "size":
         limit = budget["size_gb"] * 10**9
+        if not limit:
+            return list(wants)
         kept = []
         for w in wants:
             if used + w.size > limit:
@@ -147,11 +151,12 @@ def _trim(wants, budget, used):
             kept.append(w)
         return kept
     series_seen, movies_seen, kept = [], [], []
+    movies_prefix = budget.get("movies_dir", "movies") + "/"
     for w in wants:
-        bucket = movies_seen if w.relpath.startswith("movies/") else series_seen
+        bucket = movies_seen if w.relpath.startswith(movies_prefix) else series_seen
         limit = budget["max_movies"] if bucket is movies_seen else budget["max_series"]
         if w.group not in bucket:
-            if len(bucket) >= limit:
+            if limit and len(bucket) >= limit:
                 continue
             bucket.append(w.group)
         kept.append(w)

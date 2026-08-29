@@ -5,7 +5,8 @@
 <section class="card">
   <h2>Cache</h2>
   <div class="bar"><div class="fill" style="width: {{ [100, (100 * used / budget) if budget else 0] | min }}%"></div></div>
-  <p>{{ used | gb }} GB of {{ cfg.budget.size_gb }} GB budget &middot;
+  <p>{{ used | gb }} GB of
+     {{ (cfg.budget.size_gb ~ " GB budget") if budget else "unlimited budget" }} &middot;
      {{ last.get("cache_items", 0) }} files on NVMe &middot;
      last run {{ last.get("ts") | ts }}
      {% if last.get("dry_run") %}(dry){% endif %}</p>

@@ -149,3 +149,12 @@ def test_plan_missing_file_warns():
     promotes, demotes, warnings = plan(wants, snap)
     assert promotes == [] and demotes == []
     assert len(warnings) == 2
+
+
+def test_no_limit_budgets():
+    snap = Snapshot(series=[series(f"s{i}", 4, {"d": 0}) for i in range(5)])
+    nolimit = {**CFG, "budget": {**CFG["budget"], "size_gb": 0}}
+    assert len(desired(snap, nolimit, [], NOW)) == 10
+    counts = {**CFG, "budget": {**CFG["budget"], "mode": "count",
+                                "max_series": 0, "max_movies": 0}}
+    assert len(desired(snap, counts, [], NOW)) == 10

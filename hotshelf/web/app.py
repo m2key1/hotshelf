@@ -124,7 +124,11 @@ def settings_save(request: Request,
                   resume: str = Form(), fresh_imports: str = Form(),
                   fresh_keep_days: int = Form(), watched_grace_days: int = Form(),
                   users: str = Form(""), interval_minutes: int = Form(),
-                  move_sidecars: str = Form(None), dry_run: str = Form(None)):
+                  move_sidecars: str = Form(None), dry_run: str = Form(None),
+                  jellyfin_url: str = Form(), union_prefix: str = Form(),
+                  api_key: str = Form(""), movies_dir: str = Form(),
+                  video_exts: str = Form(), verify: str = Form(),
+                  free_space_margin_gb: int = Form()):
     """Apply the settings form onto the YAML config."""
     import yaml
     data = yaml.safe_load(cfg.raw()) or {}
@@ -140,6 +144,16 @@ def settings_save(request: Request,
     })
     data.setdefault("run", {}).update({
         "interval_minutes": interval_minutes, "dry_run": dry_run is not None})
+    jf = data.setdefault("jellyfin", {})
+    jf.update({"url": jellyfin_url, "union_prefix": union_prefix})
+    if api_key:
+        jf["api_key"] = api_key
+    data["library"] = {
+        "movies_dir": movies_dir.strip("/"),
+        "video_exts": [e.strip() if e.strip().startswith(".") else "." + e.strip()
+                       for e in video_exts.split(",") if e.strip()],
+    }
+    data["mover"] = {"verify": verify, "free_space_margin_gb": free_space_margin_gb}
     try:
         cfg.save(yaml.safe_dump(data, sort_keys=False))
         reschedule()
@@ -177,7 +191,8 @@ def evict(relpath: str = Form()):
         state.log("would demote", relpath, detail="manual")
     else:
         mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
-                      cfg["policy"]["move_sidecars"])
+                      cfg["policy"]["move_sidecars"],
+                      cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
         try:
             mover.demote(relpath)
             state.log("demote", relpath, detail="manual")

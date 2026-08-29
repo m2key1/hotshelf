@@ -15,9 +15,12 @@
           <option value="count" {{ "selected" if bud.mode == "count" }}>by count</option>
         </select>
       </label>
-      <label>Size (GB) <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="1"></label>
-      <label>Max series <input type="number" name="max_series" value="{{ bud.max_series }}" min="1"></label>
-      <label>Max movies <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0"></label>
+      <label>Size (GB, 0 = no limit)
+        <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="0"></label>
+      <label>Max series (0 = no limit)
+        <input type="number" name="max_series" value="{{ bud.max_series }}" min="0"></label>
+      <label>Max movies (0 = no limit)
+        <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0"></label>
     </fieldset>
     <fieldset>
       <legend>Policy</legend>
@@ -52,6 +55,32 @@
         <input type="text" name="users" value="{{ pol.users | join(', ') }}" placeholder="all"></label>
       <label class="check">
         <input type="checkbox" name="move_sidecars" {{ "checked" if pol.move_sidecars }}> Move sidecar files</label>
+    </fieldset>
+    <fieldset>
+      <legend>Jellyfin</legend>
+      <label>URL <input type="text" name="jellyfin_url" value="{{ cfg.jellyfin.url }}"></label>
+      <label>Library prefix
+        <input type="text" name="union_prefix" value="{{ cfg.jellyfin.union_prefix }}"></label>
+      <label>API key
+        <input type="password" name="api_key" value="" placeholder="unchanged"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Library</legend>
+      <label>Movies directory
+        <input type="text" name="movies_dir" value="{{ cfg.library.movies_dir }}"></label>
+      <label>Video extensions
+        <input type="text" name="video_exts" value="{{ cfg.library.video_exts | join(', ') }}"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Mover</legend>
+      <label>Verification
+        <select name="verify">
+          <option value="checksum" {{ "selected" if cfg.mover.verify == "checksum" }}>checksum (safest)</option>
+          <option value="size" {{ "selected" if cfg.mover.verify == "size" }}>size only (faster)</option>
+        </select>
+      </label>
+      <label>Free space margin (GB)
+        <input type="number" name="free_space_margin_gb" value="{{ cfg.mover.free_space_margin_gb }}" min="0"></label>
     </fieldset>
     <fieldset>
       <legend>Run</legend>

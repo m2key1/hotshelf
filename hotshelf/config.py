@@ -6,6 +6,11 @@ import yaml
 DEFAULTS = {
     "jellyfin": {"url": "http://jellyfin:8096", "api_key": "", "union_prefix": "/data/media"},
     "branches": {"nvme": "/branches/nvme", "hdd": "/branches/hdd"},
+    "library": {
+        "movies_dir": "movies",
+        "video_exts": [".mkv", ".mp4", ".avi", ".m4v", ".ts", ".webm", ".mov", ".wmv"],
+    },
+    "mover": {"verify": "checksum", "free_space_margin_gb": 1},
     "budget": {"mode": "size", "size_gb": 150, "max_series": 10, "max_movies": 5},
     "policy": {
         "activity_window_days": 30,
@@ -59,6 +64,8 @@ class Config:
             raise ValueError("policy.fresh_imports must be keep or demote")
         if data["policy"]["resume"] not in ("recent", "always", "off"):
             raise ValueError("policy.resume must be recent, always or off")
+        if data["mover"]["verify"] not in ("checksum", "size"):
+            raise ValueError("mover.verify must be checksum or size")
         ahead = data["policy"]["episodes_ahead"]
         if not (ahead in ("season", "series") or isinstance(ahead, int) and ahead > 0):
             raise ValueError("policy.episodes_ahead must be a positive int, season or series")
