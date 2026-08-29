@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml",
     "prometheus-client",
     "python-multipart",
+    "tzdata",
 ]
 
 [tool.setuptools.packages.find]

@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     user: "1000:1000"
     environment:
+      TZ: ${TZ}
       HOTSHELF_JELLYFIN_KEY: ${HOTSHELF_JELLYFIN_KEY}
     volumes:
       - ./config:/config

@@ -22,9 +22,27 @@ cfg = Config(CONFIG_PATH)
 state = State(STATE_PATH)
 scheduler = BackgroundScheduler()
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+
+try:
+    from zoneinfo import ZoneInfo
+    LOCAL_TZ = ZoneInfo(os.environ.get("TZ", "UTC"))
+except Exception:
+    LOCAL_TZ = timezone.utc
+
+
+def _localts(iso):
+    """Render a stored UTC ISO timestamp in the local timezone."""
+    try:
+        return (datetime.fromisoformat(iso).astimezone(LOCAL_TZ)
+                .strftime("%Y-%m-%d %H:%M:%S"))
+    except (ValueError, TypeError):
+        return iso
+
+
 templates.env.filters["gb"] = lambda b: f"{(b or 0) / 10**9:.1f}"
+templates.env.filters["localts"] = _localts
 templates.env.filters["ts"] = lambda t: (
-    datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M") if t else "never")
+    datetime.fromtimestamp(t, LOCAL_TZ).strftime("%Y-%m-%d %H:%M") if t else "never")
 
 
 def scheduled_run():

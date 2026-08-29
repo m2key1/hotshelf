@@ -10,7 +10,7 @@
                   "warn" if e.action in ("demote", "would promote", "would demote") else
                   "err" if e.action == "warning" or not e.ok else "" %}
     <tr class="{{ 'err' if not e.ok }}">
-      <td class="mono">{{ e.ts | replace("T", " ") | replace("+00:00", "") }}</td>
+      <td class="mono">{{ e.ts | localts }}</td>
       <td><span class="tag {{ kind }}">{{ e.action }}</span></td>
       <td class="path">{{ e.relpath }}</td>
       <td class="r">{{ e.bytes | gb if e.bytes else "" }}</td>

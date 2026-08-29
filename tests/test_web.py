@@ -97,3 +97,11 @@ def test_flush_dry_run_logs_only(client, tmp_path):
     entries = state.log_entries(limit=10)
     assert any(e["action"] == "would demote" and "flushme" in e["relpath"]
                for e in entries)
+
+
+def test_localts_renders_local_time(monkeypatch):
+    from hotshelf.web import app as webapp
+    from zoneinfo import ZoneInfo
+    monkeypatch.setattr(webapp, "LOCAL_TZ", ZoneInfo("Europe/Vienna"))
+    assert webapp._localts("2026-08-29T19:50:00+00:00") == "2026-08-29 21:50:00"
+    assert webapp._localts("garbage") == "garbage"
