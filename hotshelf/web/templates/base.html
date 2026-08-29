@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hotshelf</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <span class="brand">hotshelf</span>
+  <nav>
+    <a href="/">Status</a>
+    <a href="/plan">Plan</a>
+    <a href="/pins">Pins</a>
+    <a href="/config">Config</a>
+    <a href="/log">Log</a>
+  </nav>
+  <div class="actions">
+    {% if dry_run %}<span class="badge dry">DRY RUN</span>{% endif %}
+    <form method="post" action="/dryrun">
+      <button type="submit">{{ "Disable" if dry_run else "Enable" }} dry run</button>
+    </form>
+    <form method="post" action="/run"><button type="submit" class="primary">Run now</button></form>
+  </div>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

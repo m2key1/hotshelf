@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Configuration</h2>
+  {% if saved %}<p class="ok">Saved and applied.</p>{% endif %}
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  <form method="post" action="/config">
+    <textarea name="raw" rows="30" spellcheck="false">{{ raw }}</textarea>
+    <button type="submit" class="primary">Save</button>
+  </form>
+</section>
+{% endblock %}

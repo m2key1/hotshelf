@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+jinja2
+httpx
+apscheduler
+pyyaml
+prometheus-client
+python-multipart

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+{% if error %}<section class="card error"><h2>Error</h2><p>{{ error }}</p></section>{% endif %}
+<section class="card">
+  <h2>Would promote ({{ promotes | length }})</h2>
+  <table>
+    {% for w in promotes %}
+    <tr><td class="path">{{ w.relpath }}</td><td>{{ w.reason }}</td><td>{{ w.size | gb }} GB</td></tr>
+    {% else %}<tr><td>Nothing to promote.</td></tr>{% endfor %}
+  </table>
+</section>
+<section class="card">
+  <h2>Would demote ({{ demotes | length }})</h2>
+  <table>
+    {% for relpath in demotes %}
+    <tr><td class="path">{{ relpath }}</td></tr>
+    {% else %}<tr><td>Nothing to demote.</td></tr>{% endfor %}
+  </table>
+</section>
+{% if warnings %}
+<section class="card">
+  <h2>Warnings</h2>
+  <table>{% for w in warnings %}<tr><td>{{ w }}</td></tr>{% endfor %}</table>
+</section>
+{% endif %}
+{% endblock %}

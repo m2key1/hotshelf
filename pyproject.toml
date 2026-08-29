@@ -1,0 +1,18 @@
+[project]
+name = "hotshelf"
+version = "0.1.0"
+description = "Tiered media storage mover for Jellyfin"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "httpx",
+    "apscheduler",
+    "pyyaml",
+    "prometheus-client",
+    "python-multipart",
+]
+
+[tool.setuptools.packages.find]
+include = ["hotshelf*"]

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Activity</h2>
+  <table>
+    <tr><th>Time</th><th>Action</th><th>Item</th><th>Size</th><th>Detail</th></tr>
+    {% for e in entries %}
+    <tr class="{{ 'err' if not e.ok }}">
+      <td>{{ e.ts }}</td><td>{{ e.action }}</td>
+      <td class="path">{{ e.relpath }}</td>
+      <td>{{ e.bytes | gb if e.bytes else "" }}</td>
+      <td>{{ e.detail }}</td>
+    </tr>
+    {% else %}<tr><td colspan="5">No activity yet.</td></tr>{% endfor %}
+  </table>
+</section>
+{% endblock %}

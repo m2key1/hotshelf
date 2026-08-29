@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Pinned</h2>
+  <table>
+    <tr><th>Name</th><th>Kind</th><th>Granularity</th><th></th></tr>
+    {% for pin in pins %}
+    <tr>
+      <td>{{ pin.name }}</td><td>{{ pin.kind }}</td><td>{{ pin.granularity or "default" }}</td>
+      <td>
+        <form method="post" action="/pins/remove">
+          <input type="hidden" name="kind" value="{{ pin.kind }}">
+          <input type="hidden" name="key" value="{{ pin.key }}">
+          <button type="submit">unpin</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="4">Nothing pinned.</td></tr>{% endfor %}
+  </table>
+</section>
+<section class="card">
+  <h2>Pin a series</h2>
+  <form method="post" action="/pins/add" class="row">
+    <input type="hidden" name="kind" value="series">
+    <select name="key">
+      {% for s in series %}<option value="{{ s.key }}">{{ s.name }}</option>{% endfor %}
+    </select>
+    <select name="granularity">
+      <option value="">default</option>
+      <option value="3">3 episodes</option>
+      <option value="5">5 episodes</option>
+      <option value="season">whole season</option>
+      <option value="series">whole series</option>
+    </select>
+    <button type="submit" class="primary">Pin</button>
+  </form>
+  <p class="hint">Series appear here after a run has seen them. Names are stored on pin.</p>
+</section>
+<section class="card">
+  <h2>Pin a movie</h2>
+  <form method="post" action="/pins/add" class="row">
+    <input type="hidden" name="kind" value="movie">
+    <select name="key">
+      {% for m in movies %}<option value="{{ m }}">{{ m.split("/")[-1] }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="primary">Pin</button>
+  </form>
+</section>
+{% endblock %}

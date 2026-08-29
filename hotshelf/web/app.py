@@ -1,0 +1,181 @@
+import os
+import threading
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from prometheus_client import generate_latest
+
+from .. import runner
+from ..config import Config
+from ..state import State
+
+CONFIG_PATH = os.environ.get("HOTSHELF_CONFIG", "/config/config.yaml")
+STATE_PATH = os.environ.get("HOTSHELF_STATE", "/config/state.db")
+
+cfg = Config(CONFIG_PATH)
+state = State(STATE_PATH)
+scheduler = BackgroundScheduler()
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+templates.env.filters["gb"] = lambda b: f"{(b or 0) / 10**9:.1f}"
+templates.env.filters["ts"] = lambda t: (
+    datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M") if t else "never")
+
+
+def scheduled_run():
+    try:
+        cfg.reload()
+        runner.run(cfg, state)
+    except Exception as exc:
+        state.log("error", detail=f"scheduled run failed: {exc}")
+
+
+def reschedule():
+    scheduler.add_job(scheduled_run, "interval",
+                      minutes=cfg["run"]["interval_minutes"],
+                      id="policy", replace_existing=True)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    reschedule()
+    scheduler.start()
+    yield
+    scheduler.shutdown(wait=False)
+
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(
+    directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+
+
+def page(request, template, **context):
+    last = state.get_kv("last_run", {})
+    return templates.TemplateResponse(request, template, {
+        "last": last, "dry_run": cfg["run"]["dry_run"], "cfg": cfg.data, **context})
+
+
+@app.get("/", response_class=HTMLResponse)
+def status(request: Request):
+    last = state.get_kv("last_run", {})
+    pinned = {p["key"] for p in state.pins()}
+    return page(request, "status.html", hot=last.get("hot", []), pinned=pinned)
+
+
+@app.get("/plan", response_class=HTMLResponse)
+def plan_view(request: Request):
+    """Compute and show what the next run would do, without moving anything."""
+    try:
+        _, wants, promotes, demotes, warnings = runner.compute(cfg, state)
+    except Exception as exc:
+        return page(request, "plan.html", error=str(exc),
+                    promotes=[], demotes=[], warnings=[])
+    return page(request, "plan.html", error=None,
+                promotes=promotes, demotes=demotes, warnings=warnings)
+
+
+@app.get("/pins", response_class=HTMLResponse)
+def pins_view(request: Request):
+    last = state.get_kv("last_run", {})
+    return page(request, "pins.html", pins=state.pins(),
+                series=last.get("series", []), movies=last.get("movies", []))
+
+
+@app.post("/pins/add")
+def pin_add(kind: str = Form(), key: str = Form(), name: str = Form(""),
+            granularity: str = Form("")):
+    state.add_pin(kind, key, name or key, granularity or None)
+    state.log("pin", key, detail=f"{kind} granularity={granularity or 'default'}")
+    return RedirectResponse("/pins", status_code=303)
+
+
+@app.post("/pins/remove")
+def pin_remove(kind: str = Form(), key: str = Form()):
+    state.remove_pin(kind, key)
+    state.log("unpin", key, detail=kind)
+    return RedirectResponse("/pins", status_code=303)
+
+
+@app.get("/config", response_class=HTMLResponse)
+def config_view(request: Request):
+    return page(request, "config.html", raw=cfg.raw(), saved=False, error=None)
+
+
+@app.post("/config", response_class=HTMLResponse)
+def config_save(request: Request, raw: str = Form()):
+    try:
+        cfg.save(raw)
+        reschedule()
+        state.log("config", detail="saved")
+        return page(request, "config.html", raw=cfg.raw(), saved=True, error=None)
+    except Exception as exc:
+        return page(request, "config.html", raw=raw, saved=False, error=str(exc))
+
+
+@app.get("/log", response_class=HTMLResponse)
+def log_view(request: Request):
+    return page(request, "log.html", entries=state.log_entries())
+
+
+@app.post("/run")
+def run_now():
+    threading.Thread(target=scheduled_run, daemon=True).start()
+    return RedirectResponse("/log", status_code=303)
+
+
+@app.post("/dryrun")
+def toggle_dry_run():
+    import yaml
+    data = yaml.safe_load(cfg.raw()) or {}
+    data.setdefault("run", {})["dry_run"] = not cfg["run"]["dry_run"]
+    cfg.save(yaml.safe_dump(data, sort_keys=False))
+    state.log("config", detail=f"dry_run={cfg['run']['dry_run']}")
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/evict")
+def evict(relpath: str = Form()):
+    from ..mover import Mover
+    if cfg["run"]["dry_run"]:
+        state.log("would demote", relpath, detail="manual")
+    else:
+        mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
+                      cfg["policy"]["move_sidecars"])
+        try:
+            mover.demote(relpath)
+            state.log("demote", relpath, detail="manual")
+        except OSError as exc:
+            state.log("demote", relpath, ok=False, detail=str(exc))
+    return RedirectResponse("/", status_code=303)
+
+
+@app.post("/webhook/jellyfin")
+async def jellyfin_webhook(request: Request):
+    """Playback events from Jellyfin trigger an immediate run."""
+    state.log("webhook", detail="jellyfin event")
+    threading.Thread(target=scheduled_run, daemon=True).start()
+    return {"ok": True}
+
+
+@app.get("/metrics")
+def metrics_endpoint():
+    return PlainTextResponse(generate_latest(), media_type="text/plain")
+
+
+@app.get("/api/homepage")
+def homepage_widget():
+    """Compact JSON for the Homepage dashboard customapi widget."""
+    last = state.get_kv("last_run", {})
+    used = last.get("cache_used", 0)
+    budget = cfg["budget"]["size_gb"] * 10**9
+    return JSONResponse({
+        "used_gb": round(used / 10**9, 1),
+        "budget_gb": cfg["budget"]["size_gb"],
+        "percent": round(100 * used / budget, 1) if budget else 0,
+        "hot_items": last.get("cache_items", 0),
+        "dry_run": cfg["run"]["dry_run"],
+    })

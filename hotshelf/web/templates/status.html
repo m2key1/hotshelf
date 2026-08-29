@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+{% set used = last.get("cache_used", 0) %}
+{% set budget = cfg.budget.size_gb * 1000000000 %}
+<section class="card">
+  <h2>Cache</h2>
+  <div class="bar"><div class="fill" style="width: {{ [100, (100 * used / budget) if budget else 0] | min }}%"></div></div>
+  <p>{{ used | gb }} GB of {{ cfg.budget.size_gb }} GB budget &middot;
+     {{ last.get("cache_items", 0) }} files on NVMe &middot;
+     last run {{ last.get("ts") | ts }}
+     {% if last.get("dry_run") %}(dry){% endif %}</p>
+</section>
+<section class="card">
+  <h2>Hot set ({{ hot | length }} items)</h2>
+  <table>
+    <tr><th>Item</th><th>Group</th><th>Reason</th><th>Size</th><th></th></tr>
+    {% for item in hot %}
+    <tr>
+      <td class="path">{{ item.relpath }}</td>
+      <td>{{ item.group }}{% if item.group in pinned %} <span class="badge">pin</span>{% endif %}</td>
+      <td>{{ item.reason }}</td>
+      <td>{{ item.size | gb }} GB</td>
+      <td>
+        <form method="post" action="/evict">
+          <input type="hidden" name="relpath" value="{{ item.relpath }}">
+          <button type="submit">evict</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No hot items yet. Run the policy once.</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}
