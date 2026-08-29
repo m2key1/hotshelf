@@ -80,3 +80,7 @@ details form { margin-top: 0.8rem; }
   .stats { gap: 1.2rem; }
   main { padding: 0 0.8rem; }
 }
+.badge.running { background: #1d3a28; color: #8fd8a0; animation: pulse 1.6s ease-in-out infinite; }
+button[disabled] { opacity: 0.5; cursor: default; }
+button[disabled]:hover { border-color: #313a45; }
+@keyframes pulse { 50% { opacity: 0.55; } }

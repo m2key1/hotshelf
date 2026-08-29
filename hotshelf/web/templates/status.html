@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block head %}<meta http-equiv="refresh" content="60">{% endblock %}
+{% block head %}<meta http-equiv="refresh" content="{{ 10 if running.active else 60 }}">{% endblock %}
 {% block content %}
 {% set used = last.get("cache_used", 0) %}
 {% set budget = cfg.budget.size_gb * 1000000000 %}

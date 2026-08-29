@@ -74,8 +74,11 @@ app.mount("/static", StaticFiles(
 
 def page(request, template, **context):
     last = state.get_kv("last_run", {})
+    running = dict(runner.current)
+    running["elapsed"] = int(time.time() - running["started"]) if running["active"] else 0
     return templates.TemplateResponse(request, template, {
-        "last": last, "dry_run": cfg["run"]["dry_run"], "cfg": cfg.data, **context})
+        "last": last, "dry_run": cfg["run"]["dry_run"], "cfg": cfg.data,
+        "running": running, **context})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -191,6 +194,8 @@ def log_view(request: Request):
 
 @app.post("/run")
 def run_now():
+    if runner.run_lock.locked():
+        return RedirectResponse("/", status_code=303)
     threading.Thread(target=scheduled_run, daemon=True).start()
     return RedirectResponse("/log", status_code=303)
 
@@ -232,7 +237,9 @@ async def jellyfin_webhook(request: Request):
     _count_hit(payload.get("ItemId"))
     last = state.get_kv("last_run", {}).get("ts", 0)
     debounce = cfg["run"]["webhook_debounce_minutes"] * 60
-    if time.time() - last > debounce:
+    if runner.run_lock.locked():
+        state.log("webhook", detail="jellyfin event, run already in progress")
+    elif time.time() - last > debounce:
         state.log("webhook", detail="jellyfin event, run triggered")
         threading.Thread(target=scheduled_run, daemon=True).start()
     else:
@@ -274,12 +281,22 @@ def flush():
                   cfg["policy"]["move_sidecars"],
                   cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
     def work():
-        for relpath in sorted(files):
-            try:
-                mover.demote(relpath)
-                state.log("demote", relpath, files[relpath][0], detail="flush")
-            except OSError as exc:
-                state.log("demote", relpath, ok=False, detail=str(exc))
+        if not runner.run_lock.acquire(blocking=False):
+            state.log("flush", ok=False, detail="skipped, run in progress")
+            return
+        runner.current.update(active=True, started=time.time(),
+                              done=0, total=len(files))
+        try:
+            for relpath in sorted(files):
+                try:
+                    mover.demote(relpath)
+                    runner.current["done"] += 1
+                    state.log("demote", relpath, files[relpath][0], detail="flush")
+                except OSError as exc:
+                    state.log("demote", relpath, ok=False, detail=str(exc))
+        finally:
+            runner.current["active"] = False
+            runner.run_lock.release()
     threading.Thread(target=work, daemon=True).start()
     return RedirectResponse("/log", status_code=303)
 

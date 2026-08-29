@@ -8,6 +8,7 @@ from .mover import Mover
 from .policy import Episode, Series, Snapshot, desired, plan
 
 run_lock = threading.Lock()
+current = {"active": False, "started": 0.0, "done": 0, "total": 0}
 
 
 def collect(cfg, pins):
@@ -98,9 +99,11 @@ def run(cfg, state):
     """One full policy run; respects dry_run. Returns a summary dict."""
     if not run_lock.acquire(blocking=False):
         return {"skipped": "run already in progress"}
+    current.update(active=True, started=time.time(), done=0, total=0)
     try:
         return _run(cfg, state)
     finally:
+        current["active"] = False
         run_lock.release()
 
 
@@ -112,6 +115,7 @@ def _run(cfg, state):
                   cfg["policy"]["move_sidecars"],
                   cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
     moved = {"promoted": 0, "demoted": 0, "failed": 0}
+    current["total"] = len(promotes) + len(demotes)
 
     for warning in warnings:
         state.log("warning", detail=warning)
@@ -154,6 +158,7 @@ def _execute(state, action, name, relpath, size, dry, moved):
         state.log(name, relpath, size, ok=False, detail=str(exc))
         return
     moved["promoted" if name == "promote" else "demoted"] += 1
+    current["done"] += 1
     getattr(metrics, f"{name}s").inc()
     metrics.moved_bytes.inc(size)
     state.log(name, relpath, size)

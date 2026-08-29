@@ -105,3 +105,23 @@ def test_localts_renders_local_time(monkeypatch):
     monkeypatch.setattr(webapp, "LOCAL_TZ", ZoneInfo("Europe/Vienna"))
     assert webapp._localts("2026-08-29T19:50:00+00:00") == "2026-08-29 21:50:00"
     assert webapp._localts("garbage") == "garbage"
+
+
+def test_run_indicator_and_trigger_guard(client):
+    from hotshelf import runner
+    runner.run_lock.acquire()
+    runner.current.update(active=True, started=1, done=3, total=9)
+    try:
+        html = client.get("/").text
+        assert "RUNNING" in html and "3/9" in html
+        r = client.post("/run", follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/"
+        r = client.post("/webhook/jellyfin", json={})
+        assert r.json() == {"ok": True}
+    finally:
+        runner.run_lock.release()
+        runner.current["active"] = False
+    entries = client.app  # noqa: F841
+    from hotshelf.web.app import state
+    assert any(e["detail"] == "jellyfin event, run already in progress"
+               for e in state.log_entries(limit=5))

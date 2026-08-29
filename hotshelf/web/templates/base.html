@@ -18,11 +18,19 @@
     {% endfor %}
   </nav>
   <div class="actions">
+    {% if running.active %}
+    <span class="badge running">RUNNING
+      {%- if running.total %} {{ running.done }}/{{ running.total }}{% endif %}
+      &middot; {{ running.elapsed }}s</span>
+    {% endif %}
     {% if dry_run %}<span class="badge dry">DRY RUN</span>{% endif %}
     <form method="post" action="/dryrun">
       <button type="submit">{{ "Disable" if dry_run else "Enable" }} dry run</button>
     </form>
-    <form method="post" action="/run"><button type="submit" class="primary">Run now</button></form>
+    <form method="post" action="/run">
+      <button type="submit" class="primary" {{ "disabled" if running.active }}>
+        {{ "Running..." if running.active else "Run now" }}</button>
+    </form>
   </div>
 </header>
 <main>
