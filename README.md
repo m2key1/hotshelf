@@ -2,8 +2,7 @@
 
 Tiered media storage for Jellyfin. Keeps what the household is actually
 watching on NVMe; everything else stays on HDD. All apps see one library
-through a mergerfs union, so files move between tiers invisibly. See
-DESIGN.md for the architecture.
+through a mergerfs union, so files move between tiers invisibly.
 
 ## Requirements
 
