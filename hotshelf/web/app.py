@@ -193,7 +193,7 @@ def evict(relpath: str = Form()):
     if cfg["run"]["dry_run"]:
         state.log("would demote", relpath, detail="manual")
     else:
-        mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
+        mover = Mover(cfg["branches"]["fast"], cfg["branches"]["slow"],
                       cfg["policy"]["move_sidecars"],
                       cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
         try:
@@ -223,7 +223,7 @@ async def jellyfin_webhook(request: Request):
 
 
 def _count_hit(item_id):
-    """Best-effort: was this playback served from NVMe?"""
+    """Best-effort: was this playback served from the fast branch?"""
     if not item_id:
         return
     from .. import metrics
@@ -234,7 +234,7 @@ def _count_hit(item_id):
         relpath = jf.item_path(item_id)
         if not relpath:
             return
-        if os.path.exists(os.path.join(cfg["branches"]["nvme"], relpath)):
+        if os.path.exists(os.path.join(cfg["branches"]["fast"], relpath)):
             metrics.cache_hits.inc()
         else:
             metrics.cache_misses.inc()
@@ -244,15 +244,15 @@ def _count_hit(item_id):
 
 @app.post("/flush")
 def flush():
-    """Demote everything on NVMe, for rollback or a fresh start."""
+    """Demote everything on the fast branch, for rollback or a fresh start."""
     from ..library import scan
     from ..mover import Mover
-    files = scan(cfg["branches"]["nvme"], cfg["library"]["video_exts"])
+    files = scan(cfg["branches"]["fast"], cfg["library"]["video_exts"])
     if cfg["run"]["dry_run"]:
         for relpath in sorted(files):
             state.log("would demote", relpath, files[relpath][0], detail="flush")
         return RedirectResponse("/log", status_code=303)
-    mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
+    mover = Mover(cfg["branches"]["fast"], cfg["branches"]["slow"],
                   cfg["policy"]["move_sidecars"],
                   cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
     def work():

@@ -47,9 +47,9 @@ class Snapshot:
     resume: list = field(default_factory=list)
     series: list = field(default_factory=list)
     movies: dict = field(default_factory=dict)
-    nvme: dict = field(default_factory=dict)
-    hdd: dict = field(default_factory=dict)
-    nvme_mtime: dict = field(default_factory=dict)
+    fast: dict = field(default_factory=dict)
+    slow: dict = field(default_factory=dict)
+    fast_mtime: dict = field(default_factory=dict)
 
 
 def _episode_indices(series, granularity):
@@ -127,9 +127,9 @@ def desired(snapshot, cfg, pins, now=None):
 
     if pol["fresh_imports"] == "keep":
         fresh_cutoff = (now - timedelta(days=pol["fresh_keep_days"])).timestamp()
-        for relpath, mtime in sorted(snapshot.nvme_mtime.items()):
-            if mtime >= fresh_cutoff and relpath in snapshot.nvme:
-                add(rest, [Want(relpath, snapshot.nvme[relpath], PRIORITY_FRESH,
+        for relpath, mtime in sorted(snapshot.fast_mtime.items()):
+            if mtime >= fresh_cutoff and relpath in snapshot.fast:
+                add(rest, [Want(relpath, snapshot.fast[relpath], PRIORITY_FRESH,
                                 REASON[PRIORITY_FRESH])])
 
     budget = {**cfg["budget"],
@@ -168,20 +168,20 @@ def plan(wants, snapshot):
     desired_paths = {w.relpath for w in wants}
     warnings = []
     skip = set()
-    for relpath in sorted(desired_paths - snapshot.nvme.keys() - snapshot.hdd.keys()):
+    for relpath in sorted(desired_paths - snapshot.fast.keys() - snapshot.slow.keys()):
         warnings.append(f"not found in any branch: {relpath}")
         skip.add(relpath)
-    for relpath in sorted(snapshot.nvme.keys() & snapshot.hdd.keys()):
-        if snapshot.nvme[relpath] != snapshot.hdd[relpath]:
+    for relpath in sorted(snapshot.fast.keys() & snapshot.slow.keys()):
+        if snapshot.fast[relpath] != snapshot.slow[relpath]:
             warnings.append(f"size mismatch between branches, skipped: {relpath}")
             skip.add(relpath)
 
     promotes = [w for w in wants
-                if w.relpath in snapshot.hdd
-                and w.relpath not in snapshot.nvme
+                if w.relpath in snapshot.slow
+                and w.relpath not in snapshot.fast
                 and w.relpath not in skip]
     demotes = sorted(
-        relpath for relpath in snapshot.nvme
+        relpath for relpath in snapshot.fast
         if relpath not in desired_paths
         and relpath not in skip
         and not relpath.endswith(PARTIAL_SUFFIX)

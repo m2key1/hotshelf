@@ -5,7 +5,7 @@ import yaml
 
 DEFAULTS = {
     "jellyfin": {"url": "http://jellyfin:8096", "api_key": "", "union_prefix": "/data/media"},
-    "branches": {"nvme": "/branches/nvme", "hdd": "/branches/hdd"},
+    "branches": {"fast": "/branches/fast", "slow": "/branches/slow"},
     "library": {
         "movies_dir": "movies",
         "video_exts": [".mkv", ".mp4", ".avi", ".m4v", ".ts", ".webm", ".mov", ".wmv"],

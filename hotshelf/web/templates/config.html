@@ -28,7 +28,7 @@
       <legend>Policy</legend>
       {% call field("Activity window (days)", "A series counts as active if someone watched it within this many days.") %}
         <input type="number" name="activity_window_days" value="{{ pol.activity_window_days }}" min="1">{% endcall %}
-      {% call field("Preload", "How far ahead each active series is staged on NVMe.") %}
+      {% call field("Preload", "How far ahead each active series is staged on the fast branch.") %}
         <select name="episodes_ahead">
           {% for opt in ["1", "2", "3", "5", "10", "season", "series"] %}
           <option value="{{ opt }}" {{ "selected" if pol.episodes_ahead | string == opt }}>
@@ -41,9 +41,9 @@
           <option value="always" {{ "selected" if pol.resume == "always" }}>always</option>
           <option value="off" {{ "selected" if pol.resume == "off" }}>off</option>
         </select>{% endcall %}
-      {% call field("Fresh imports", "New downloads land on NVMe; keep them hot or move them off next run.") %}
+      {% call field("Fresh imports", "New downloads land on the fast branch; keep them hot or move them off next run.") %}
         <select name="fresh_imports">
-          <option value="keep" {{ "selected" if pol.fresh_imports == "keep" }}>keep on NVMe</option>
+          <option value="keep" {{ "selected" if pol.fresh_imports == "keep" }}>keep on fast</option>
           <option value="demote" {{ "selected" if pol.fresh_imports == "demote" }}>demote next run</option>
         </select>{% endcall %}
       {% call field("Fresh kept (days)", "How long unwatched new imports stay hot.") %}

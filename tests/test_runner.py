@@ -35,7 +35,7 @@ def test_merge_episodes_fully_watched_user_has_no_next():
 def test_fill_sizes_from_branches():
     series = Series("k", "n", [Episode("tv/a.mkv", 0, 1)])
     snap = Snapshot(series=[series], resume=[("tv/b.mkv", 0, "u", "")],
-                    hdd={"tv/a.mkv": 111, "tv/b.mkv": 222})
+                    slow={"tv/a.mkv": 111, "tv/b.mkv": 222})
     _fill_sizes(snap)
     assert series.episodes[0].size == 111
     assert snap.resume[0][1] == 222

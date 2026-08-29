@@ -27,7 +27,7 @@ def seed_last_run():
         "ts": 1756480000.0, "dry_run": True, "cache_used": 48_000_000_000,
         "cache_items": 12, "warnings": [],
         "hot": [{"relpath": "tv/Silo/S03E09.mkv", "size": 4_000_000_000,
-                 "reason": "active series", "group": "Silo", "tier": "nvme"}],
+                 "reason": "active series", "group": "Silo", "tier": "fast"}],
         "series": [{"key": "abc", "name": "Silo", "last_activity": "2026-08-29"}],
         "movies": ["movies/Dune (2021)"],
     })
@@ -87,9 +87,9 @@ def test_webhook_accepts_garbage(client):
 def test_flush_dry_run_logs_only(client, tmp_path):
     import yaml
     data = yaml.safe_load(cfg.raw())
-    nvme = data["branches"]["nvme"]
+    fast_dir = data["branches"]["fast"]
     (tmp_path / "dummy").mkdir()
-    with open(f"{nvme}/flushme.mkv", "wb") as f:
+    with open(f"{fast_dir}/flushme.mkv", "wb") as f:
         f.write(b"x" * 10)
     client.post("/settings", data={**SETTINGS, "dry_run": "on"})
     r = client.post("/flush", follow_redirects=False)

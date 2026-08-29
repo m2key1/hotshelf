@@ -38,15 +38,15 @@ def collect(cfg, pins):
             series_list.append(Series(sid, info["name"], episodes, info["last"], next_index))
 
     exts = cfg["library"]["video_exts"]
-    nvme_scan = scan(cfg["branches"]["nvme"], exts)
-    hdd_scan = scan(cfg["branches"]["hdd"], exts)
+    fast_scan = scan(cfg["branches"]["fast"], exts)
+    slow_scan = scan(cfg["branches"]["slow"], exts)
     snapshot = Snapshot(
         resume=resume,
         series=series_list,
-        movies=movie_dirs(cfg["library"]["movies_dir"], nvme_scan, hdd_scan),
-        nvme={rp: s for rp, (s, _) in nvme_scan.items()},
-        hdd={rp: s for rp, (s, _) in hdd_scan.items()},
-        nvme_mtime={rp: m for rp, (_, m) in nvme_scan.items()},
+        movies=movie_dirs(cfg["library"]["movies_dir"], fast_scan, slow_scan),
+        fast={rp: s for rp, (s, _) in fast_scan.items()},
+        slow={rp: s for rp, (s, _) in slow_scan.items()},
+        fast_mtime={rp: m for rp, (_, m) in fast_scan.items()},
     )
     _fill_sizes(snapshot)
     return snapshot
@@ -74,7 +74,7 @@ def _merge_episodes(jf, series_id, users):
 
 def _fill_sizes(snapshot):
     """Replace unknown Jellyfin sizes with actual branch file sizes."""
-    lookup = {**snapshot.hdd, **snapshot.nvme}
+    lookup = {**snapshot.slow, **snapshot.fast}
     for series in snapshot.series:
         for ep in series.episodes:
             if not ep.size:
@@ -108,7 +108,7 @@ def _run(cfg, state):
     """The actual run body, called under run_lock."""
     dry = cfg["run"]["dry_run"]
     snapshot, wants, promotes, demotes, warnings = compute(cfg, state)
-    mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
+    mover = Mover(cfg["branches"]["fast"], cfg["branches"]["slow"],
                   cfg["policy"]["move_sidecars"],
                   cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
     moved = {"promoted": 0, "demoted": 0, "failed": 0}
@@ -118,7 +118,7 @@ def _run(cfg, state):
     for want in promotes:
         _execute(state, mover.promote, "promote", want.relpath, want.size, dry, moved)
     for relpath in demotes:
-        _execute(state, mover.demote, "demote", relpath, snapshot.nvme[relpath], dry, moved)
+        _execute(state, mover.demote, "demote", relpath, snapshot.fast[relpath], dry, moved)
 
     _update_metrics(cfg, snapshot, moved, dry)
     promoted_now = {w.relpath for w in promotes} if not dry else set()
@@ -126,13 +126,13 @@ def _run(cfg, state):
         "ts": time.time(), "dry_run": dry, "warnings": warnings, **moved,
         "hot": [{"relpath": w.relpath, "size": w.size, "reason": w.reason,
                  "group": w.group,
-                 "tier": "nvme" if w.relpath in snapshot.nvme or w.relpath in promoted_now
-                 else "hdd"} for w in wants],
+                 "tier": "fast" if w.relpath in snapshot.fast or w.relpath in promoted_now
+                 else "slow"} for w in wants],
         "series": [{"key": s.key, "name": s.name, "last_activity": s.last_activity}
                    for s in snapshot.series],
         "movies": sorted(snapshot.movies),
-        "cache_used": sum(snapshot.nvme.values()),
-        "cache_items": len(snapshot.nvme),
+        "cache_used": sum(snapshot.fast.values()),
+        "cache_items": len(snapshot.fast),
     }
     state.set_kv("last_run", summary)
     state.log("run", detail=f"promoted={moved['promoted']} demoted={moved['demoted']} "
@@ -160,8 +160,8 @@ def _execute(state, action, name, relpath, size, dry, moved):
 
 
 def _update_metrics(cfg, snapshot, moved, dry):
-    metrics.cache_bytes.set(sum(snapshot.nvme.values()))
-    metrics.hot_items.set(len(snapshot.nvme))
+    metrics.cache_bytes.set(sum(snapshot.fast.values()))
+    metrics.hot_items.set(len(snapshot.fast))
     metrics.budget_bytes.set(cfg["budget"]["size_gb"] * 10**9)
     metrics.dry_run.set(int(dry))
     metrics.last_run.set(time.time())

@@ -8,7 +8,7 @@
   <h2>Cache</h2>
   <div class="stats">
     <div class="stat"><span class="num">{{ used | gb }}</span><span class="unit">GB hot</span></div>
-    <div class="stat"><span class="num">{{ last.get("cache_items", 0) }}</span><span class="unit">files on NVMe</span></div>
+    <div class="stat"><span class="num">{{ last.get("cache_items", 0) }}</span><span class="unit">files on fast</span></div>
     <div class="stat"><span class="num">{{ hot | length }}</span><span class="unit">in hot set</span></div>
     <div class="stat"><span class="num">{{ last.get("warnings", []) | length }}</span><span class="unit">warnings</span></div>
     <div class="stat"><span class="num">{{ last.get("ts") | ts }}</span><span class="unit">last run{{ " (dry)" if last.get("dry_run") }}</span></div>
@@ -30,8 +30,8 @@
       <td class="path">{{ item.relpath }}</td>
       <td>{{ item.group }}{% if item.group in pinned %} <span class="badge">pin</span>{% endif %}</td>
       <td>{{ item.reason }}</td>
-      <td>{% if item.get("tier") == "nvme" %}<span class="badge">NVMe</span>
-          {% else %}<span class="badge pending">HDD</span>{% endif %}</td>
+      <td>{% if item.get("tier") == "fast" %}<span class="badge">fast</span>
+          {% else %}<span class="badge pending">slow</span>{% endif %}</td>
       <td class="r">{{ item.size | gb }} GB</td>
       <td>
         <form method="post" action="/evict">
@@ -49,9 +49,9 @@
 <section class="card">
   <h2>Maintenance</h2>
   <form method="post" action="/flush"
-        onsubmit="return confirm('Demote every file on NVMe back to HDD?')">
+        onsubmit="return confirm('Demote every file on the fast branch back to slow?')">
     <button type="submit">Flush cache</button>
   </form>
-  <p class="hint">Moves everything back to HDD, verified. Used for rollback or a clean start.</p>
+  <p class="hint">Moves everything back to the slow branch, verified. Used for rollback or a clean start.</p>
 </section>
 {% endblock %}

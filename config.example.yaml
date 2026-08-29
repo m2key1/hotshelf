@@ -4,8 +4,8 @@ jellyfin:
   union_prefix: /data/media
 
 branches:
-  nvme: /branches/nvme
-  hdd: /branches/hdd
+  fast: /branches/fast
+  slow: /branches/slow
 
 budget:
   mode: size

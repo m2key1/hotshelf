@@ -118,8 +118,8 @@ def test_count_budget():
 
 def test_fresh_keep_and_expiry():
     snap = Snapshot(
-        nvme={"tv/x/new.mkv": GB, "tv/x/old.mkv": GB},
-        nvme_mtime={"tv/x/new.mkv": NOW.timestamp() - 86400,
+        fast={"tv/x/new.mkv": GB, "tv/x/old.mkv": GB},
+        fast_mtime={"tv/x/new.mkv": NOW.timestamp() - 86400,
                     "tv/x/old.mkv": NOW.timestamp() - 30 * 86400},
     )
     wants = desired(snap, CFG, [], NOW)
@@ -132,8 +132,8 @@ def test_plan_promote_demote_conflict():
     s = series("show", 4, {"d": 0})
     snap = Snapshot(
         series=[s],
-        nvme={"tv/stale.mkv": GB, "tv/dup.mkv": GB, "tv/show/S01E00.mkv": 4 * GB},
-        hdd={"tv/show/S01E01.mkv": 4 * GB, "tv/dup.mkv": 2 * GB},
+        fast={"tv/stale.mkv": GB, "tv/dup.mkv": GB, "tv/show/S01E00.mkv": 4 * GB},
+        slow={"tv/show/S01E01.mkv": 4 * GB, "tv/dup.mkv": 2 * GB},
     )
     wants = desired(snap, CFG, [], NOW)
     promotes, demotes, warnings = plan(wants, snap)

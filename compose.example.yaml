@@ -8,8 +8,8 @@ services:
       HOTSHELF_JELLYFIN_KEY: ${HOTSHELF_JELLYFIN_KEY}
     volumes:
       - ./config:/config
-      - /fast/media-cache:/branches/nvme
-      - /data/media-hdd:/branches/hdd
+      - /fast/media-cache:/branches/fast
+      - /data/media-hdd:/branches/slow
     networks: [proxy]
     labels:
       - "traefik.enable=true"

@@ -58,10 +58,10 @@ def _prune_empty_dirs(root, relpath):
 class Mover:
     """Executes promotes and demotes between the two branches."""
 
-    def __init__(self, nvme_root, hdd_root, move_sidecars=True,
+    def __init__(self, fast_root, slow_root, move_sidecars=True,
                  verify="checksum", free_space_margin_gb=1):
-        self.nvme_root = nvme_root
-        self.hdd_root = hdd_root
+        self.fast_root = fast_root
+        self.slow_root = slow_root
         self.move_sidecars = move_sidecars
         self.verify = verify
         self.margin = free_space_margin_gb * 10**9
@@ -85,7 +85,7 @@ class Mover:
         _prune_empty_dirs(src_root, relpath)
 
     def promote(self, relpath):
-        self._move(relpath, self.hdd_root, self.nvme_root)
+        self._move(relpath, self.slow_root, self.fast_root)
 
     def demote(self, relpath):
-        self._move(relpath, self.nvme_root, self.hdd_root)
+        self._move(relpath, self.fast_root, self.slow_root)

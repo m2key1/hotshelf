@@ -2,12 +2,12 @@ import os
 import tempfile
 
 _tmp = tempfile.mkdtemp(prefix="hotshelf-test-")
-for sub in ("nvme", "hdd"):
+for sub in ("fast", "slow"):
     os.makedirs(os.path.join(_tmp, sub))
 with open(os.path.join(_tmp, "config.yaml"), "w") as f:
     f.write(f"""branches:
-  nvme: {_tmp}/nvme
-  hdd: {_tmp}/hdd
+  fast: {_tmp}/fast
+  slow: {_tmp}/slow
 run:
   dry_run: true
 """)
