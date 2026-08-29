@@ -23,7 +23,38 @@ Disable it from the header once the plan looks right.
 - `/metrics` Prometheus
 - `/api/homepage` JSON for a Homepage customapi widget
 - `/webhook/jellyfin` POST target for the Jellyfin webhook plugin
-  (PlaybackStart), triggers an immediate policy run
+  (PlaybackStart): counts a cache hit or miss, then triggers a debounced
+  policy run so the next episodes stage mid-watch
+
+## Wiring the integrations
+
+Jellyfin webhook: install the Webhook plugin, add a Generic Destination with
+url `http://hotshelf:8080/webhook/jellyfin`, enable only Playback Start and
+the "Send All Properties" template.
+
+Homepage widget:
+
+```yaml
+- Cache:
+    icon: mdi-harddisk
+    widget:
+      type: customapi
+      url: http://hotshelf:8080/api/homepage
+      mappings:
+        - field: used_gb
+          label: hot
+          suffix: " GB"
+        - field: hot_items
+          label: items
+```
+
+Prometheus scrape job:
+
+```yaml
+- job_name: hotshelf
+  static_configs:
+    - targets: ["hotshelf:8080"]
+```
 
 ## Tests
 
