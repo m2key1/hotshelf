@@ -45,3 +45,9 @@ def test_env_key_override(tmp_path, monkeypatch):
     monkeypatch.setenv("HOTSHELF_JELLYFIN_KEY", "from-env")
     cfg = make(tmp_path, 'jellyfin:\n  api_key: "from-file"\n')
     assert cfg["jellyfin"]["api_key"] == "from-env"
+
+
+def test_config_supports_get_like_a_mapping(tmp_path):
+    cfg = make(tmp_path)
+    assert cfg.get("library")["movies_dir"] == "movies"
+    assert cfg.get("missing", 7) == 7

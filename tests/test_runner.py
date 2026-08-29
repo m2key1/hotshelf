@@ -65,3 +65,12 @@ def test_execute_counts_failure():
     _execute(state, boom, "promote", "tv/x.mkv", 5, False, moved)
     assert moved["failed"] == 1
     assert state.entries[0][2] is False
+
+
+def test_desired_accepts_config_object(tmp_path):
+    from hotshelf.config import Config
+    from hotshelf.policy import desired
+
+    (tmp_path / "c.yaml").write_text("")
+    cfg = Config(str(tmp_path / "c.yaml"))
+    assert desired(Snapshot(), cfg, []) == []
