@@ -9,6 +9,7 @@ CFG = {
     "policy": {
         "activity_window_days": 30,
         "episodes_ahead": 2,
+        "resume": "recent",
         "fresh_imports": "keep",
         "fresh_keep_days": 14,
         "watched_grace_days": 7,
@@ -25,10 +26,21 @@ def series(key, n_eps, next_index, last_activity="2026-08-29", season=1):
 
 
 def test_resume_always_first():
-    snap = Snapshot(resume=[("tv/a/S01E00.mkv", 4 * GB, "david")])
+    snap = Snapshot(resume=[("tv/a/S01E00.mkv", 4 * GB, "david", "2026-08-29T20:00:00Z")])
     wants = desired(snap, CFG, [], NOW)
     assert [w.relpath for w in wants] == ["tv/a/S01E00.mkv"]
     assert wants[0].reason == "resume"
+
+
+def test_resume_modes():
+    stale = ("tv/old.mkv", GB, "d", "2026-01-01T00:00:00Z")
+    fresh = ("tv/new.mkv", GB, "d", "2026-08-29T00:00:00Z")
+    snap = Snapshot(resume=[stale, fresh])
+    assert [w.relpath for w in desired(snap, CFG, [], NOW)] == ["tv/new.mkv"]
+    always = {**CFG, "policy": {**CFG["policy"], "resume": "always"}}
+    assert len(desired(snap, always, [], NOW)) == 2
+    off = {**CFG, "policy": {**CFG["policy"], "resume": "off"}}
+    assert desired(snap, off, [], NOW) == []
 
 
 def test_episodes_ahead():
@@ -88,7 +100,7 @@ def test_size_budget_trims_by_recency():
 
 
 def test_resume_never_trimmed():
-    snap = Snapshot(resume=[("tv/a/big.mkv", 500 * GB, "d")])
+    snap = Snapshot(resume=[("tv/a/big.mkv", 500 * GB, "d", "2026-08-29T00:00:00Z")])
     cfg = {**CFG, "budget": {**CFG["budget"], "size_gb": 10}}
     assert len(desired(snap, cfg, [], NOW)) == 1
 

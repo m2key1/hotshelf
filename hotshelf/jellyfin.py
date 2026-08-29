@@ -30,17 +30,18 @@ class Jellyfin:
         return [(u["Id"], u["Name"]) for u in users]
 
     def resume(self, user_id):
-        """In-progress items for a user as (relpath, size) tuples."""
+        """In-progress items for a user as (relpath, size, last_played) tuples."""
         items = self.get(
             f"/Users/{user_id}/Items/Resume",
             Recursive="true", MediaTypes="Video",
-            Fields="Path,MediaSources", Limit=100,
+            Fields="Path,MediaSources,UserData", Limit=100,
         ).get("Items", [])
         out = []
         for item in items:
             rp = self.relpath(item.get("Path"))
             if rp:
-                out.append((rp, _size(item)))
+                played = (item.get("UserData") or {}).get("LastPlayedDate", "")
+                out.append((rp, _size(item), played))
         return out
 
     def played_series(self, user_id, window_days):

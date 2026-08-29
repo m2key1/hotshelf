@@ -16,6 +16,7 @@ budget:
 policy:
   activity_window_days: 30
   episodes_ahead: 3
+  resume: recent
   fresh_imports: keep
   fresh_keep_days: 14
   watched_grace_days: 7

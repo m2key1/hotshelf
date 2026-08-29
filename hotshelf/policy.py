@@ -101,7 +101,13 @@ def desired(snapshot, cfg, pins, now=None):
                 seen.add(w.relpath)
                 target.append(w)
 
-    for relpath, size, user in snapshot.resume:
+    resume_mode = pol["resume"]
+    window_cutoff = (now - timedelta(days=pol["activity_window_days"])).isoformat()
+    for relpath, size, user, last_played in snapshot.resume:
+        if resume_mode == "off":
+            break
+        if resume_mode == "recent" and (not last_played or last_played < window_cutoff):
+            continue
         add(resume, [Want(relpath, size, PRIORITY_RESUME, REASON[PRIORITY_RESUME], user)])
 
     for series in snapshot.series:

@@ -10,6 +10,7 @@ DEFAULTS = {
     "policy": {
         "activity_window_days": 30,
         "episodes_ahead": 3,
+        "resume": "recent",
         "fresh_imports": "keep",
         "fresh_keep_days": 14,
         "watched_grace_days": 7,
@@ -56,6 +57,8 @@ class Config:
             raise ValueError("budget.mode must be size or count")
         if data["policy"]["fresh_imports"] not in ("keep", "demote"):
             raise ValueError("policy.fresh_imports must be keep or demote")
+        if data["policy"]["resume"] not in ("recent", "always", "off"):
+            raise ValueError("policy.resume must be recent, always or off")
         ahead = data["policy"]["episodes_ahead"]
         if not (ahead in ("season", "series") or isinstance(ahead, int) and ahead > 0):
             raise ValueError("policy.episodes_ahead must be a positive int, season or series")

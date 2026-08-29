@@ -36,3 +36,15 @@ select, input { background: #101418; color: #d7dde3; border: 1px solid #313a45;
 .ok { color: #6dcf7e; margin-bottom: 0.6rem; }
 .err, tr.err td { color: #e07a6a; }
 section.error { border-color: #a04434; }
+.settings { display: flex; flex-direction: column; gap: 1rem; }
+fieldset { border: 1px solid #262d35; border-radius: 6px; padding: 0.8rem 1rem;
+           display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+           gap: 0.7rem 1.2rem; }
+legend { color: #6c7a89; font-size: 0.8rem; text-transform: uppercase;
+         letter-spacing: 0.08em; padding: 0 0.4rem; }
+.settings label { display: flex; flex-direction: column; gap: 0.25rem;
+                  font-size: 0.85rem; color: #9fb0c0; }
+.settings label.check { flex-direction: row; align-items: center; gap: 0.5rem; }
+.settings button { align-self: flex-start; }
+summary { cursor: pointer; color: #9fb0c0; }
+details form { margin-top: 0.8rem; }

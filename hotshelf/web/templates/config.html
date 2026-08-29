@@ -1,12 +1,75 @@
 {% extends "base.html" %}
 {% block content %}
+{% set pol = cfg.policy %}
+{% set bud = cfg.budget %}
 <section class="card">
-  <h2>Configuration</h2>
+  <h2>Settings</h2>
   {% if saved %}<p class="ok">Saved and applied.</p>{% endif %}
   {% if error %}<p class="err">{{ error }}</p>{% endif %}
-  <form method="post" action="/config">
-    <textarea name="raw" rows="30" spellcheck="false">{{ raw }}</textarea>
-    <button type="submit" class="primary">Save</button>
+  <form method="post" action="/settings" class="settings">
+    <fieldset>
+      <legend>Budget</legend>
+      <label>Mode
+        <select name="budget_mode">
+          <option value="size" {{ "selected" if bud.mode == "size" }}>by size</option>
+          <option value="count" {{ "selected" if bud.mode == "count" }}>by count</option>
+        </select>
+      </label>
+      <label>Size (GB) <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="1"></label>
+      <label>Max series <input type="number" name="max_series" value="{{ bud.max_series }}" min="1"></label>
+      <label>Max movies <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Policy</legend>
+      <label>Activity window (days)
+        <input type="number" name="activity_window_days" value="{{ pol.activity_window_days }}" min="1"></label>
+      <label>Preload
+        <select name="episodes_ahead">
+          {% for opt in ["1", "2", "3", "5", "10", "season", "series"] %}
+          <option value="{{ opt }}" {{ "selected" if pol.episodes_ahead | string == opt }}>
+            {{ opt if opt in ["season", "series"] else opt + " episodes" }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Resume items
+        <select name="resume">
+          <option value="recent" {{ "selected" if pol.resume == "recent" }}>recent only</option>
+          <option value="always" {{ "selected" if pol.resume == "always" }}>always</option>
+          <option value="off" {{ "selected" if pol.resume == "off" }}>off</option>
+        </select>
+      </label>
+      <label>Fresh imports
+        <select name="fresh_imports">
+          <option value="keep" {{ "selected" if pol.fresh_imports == "keep" }}>keep on NVMe</option>
+          <option value="demote" {{ "selected" if pol.fresh_imports == "demote" }}>demote next run</option>
+        </select>
+      </label>
+      <label>Fresh kept (days)
+        <input type="number" name="fresh_keep_days" value="{{ pol.fresh_keep_days }}" min="1"></label>
+      <label>Watched grace (days)
+        <input type="number" name="watched_grace_days" value="{{ pol.watched_grace_days }}" min="0"></label>
+      <label>Users (empty = all)
+        <input type="text" name="users" value="{{ pol.users | join(', ') }}" placeholder="all"></label>
+      <label class="check">
+        <input type="checkbox" name="move_sidecars" {{ "checked" if pol.move_sidecars }}> Move sidecar files</label>
+    </fieldset>
+    <fieldset>
+      <legend>Run</legend>
+      <label>Interval (minutes)
+        <input type="number" name="interval_minutes" value="{{ cfg.run.interval_minutes }}" min="1"></label>
+      <label class="check">
+        <input type="checkbox" name="dry_run" {{ "checked" if cfg.run.dry_run }}> Dry run</label>
+    </fieldset>
+    <button type="submit" class="primary">Save settings</button>
   </form>
+</section>
+<section class="card">
+  <details>
+    <summary>Raw YAML (advanced)</summary>
+    <form method="post" action="/config">
+      <textarea name="raw" rows="24" spellcheck="false">{{ raw }}</textarea>
+      <button type="submit">Save raw config</button>
+    </form>
+  </details>
 </section>
 {% endblock %}

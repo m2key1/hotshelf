@@ -116,6 +116,39 @@ def config_save(request: Request, raw: str = Form()):
         return page(request, "config.html", raw=raw, saved=False, error=str(exc))
 
 
+@app.post("/settings", response_class=HTMLResponse)
+def settings_save(request: Request,
+                  budget_mode: str = Form(), size_gb: int = Form(),
+                  max_series: int = Form(), max_movies: int = Form(),
+                  activity_window_days: int = Form(), episodes_ahead: str = Form(),
+                  resume: str = Form(), fresh_imports: str = Form(),
+                  fresh_keep_days: int = Form(), watched_grace_days: int = Form(),
+                  users: str = Form(""), interval_minutes: int = Form(),
+                  move_sidecars: str = Form(None), dry_run: str = Form(None)):
+    """Apply the settings form onto the YAML config."""
+    import yaml
+    data = yaml.safe_load(cfg.raw()) or {}
+    ahead = episodes_ahead if episodes_ahead in ("season", "series") else int(episodes_ahead)
+    data["budget"] = {"mode": budget_mode, "size_gb": size_gb,
+                      "max_series": max_series, "max_movies": max_movies}
+    data.setdefault("policy", {}).update({
+        "activity_window_days": activity_window_days, "episodes_ahead": ahead,
+        "resume": resume, "fresh_imports": fresh_imports,
+        "fresh_keep_days": fresh_keep_days, "watched_grace_days": watched_grace_days,
+        "users": [u.strip() for u in users.split(",") if u.strip()],
+        "move_sidecars": move_sidecars is not None,
+    })
+    data.setdefault("run", {}).update({
+        "interval_minutes": interval_minutes, "dry_run": dry_run is not None})
+    try:
+        cfg.save(yaml.safe_dump(data, sort_keys=False))
+        reschedule()
+        state.log("config", detail="settings saved")
+        return page(request, "config.html", raw=cfg.raw(), saved=True, error=None)
+    except Exception as exc:
+        return page(request, "config.html", raw=cfg.raw(), saved=False, error=str(exc))
+
+
 @app.get("/log", response_class=HTMLResponse)
 def log_view(request: Request):
     return page(request, "log.html", entries=state.log_entries())

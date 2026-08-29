@@ -20,8 +20,8 @@ def collect(cfg, pins):
     resume = []
     activity = {}
     for uid, uname in users:
-        for relpath, size in jf.resume(uid):
-            resume.append((relpath, size, uname))
+        for relpath, size, last_played in jf.resume(uid):
+            resume.append((relpath, size, uname, last_played))
         for sid, (name, played) in jf.played_series(uid, pol["activity_window_days"]).items():
             current = activity.setdefault(sid, {"name": name, "last": "", "users": []})
             current["last"] = max(current["last"], played)
@@ -79,7 +79,8 @@ def _fill_sizes(snapshot):
             if not ep.size:
                 ep.size = lookup.get(ep.relpath, 0)
     snapshot.resume = [
-        (rp, size or lookup.get(rp, 0), user) for rp, size, user in snapshot.resume
+        (rp, size or lookup.get(rp, 0), user, played)
+        for rp, size, user, played in snapshot.resume
     ]
 
 
