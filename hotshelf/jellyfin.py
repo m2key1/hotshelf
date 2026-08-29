@@ -63,6 +63,11 @@ class Jellyfin:
                 series[sid] = (item.get("SeriesName", sid), played)
         return series
 
+    def item_path(self, item_id):
+        """Branch-relative path of one item by id, or None."""
+        items = self.get("/Items", ids=item_id, Fields="Path").get("Items", [])
+        return self.relpath(items[0].get("Path")) if items else None
+
     def episodes(self, series_id, user_id):
         """Ordered episodes of a series with per-user watch state."""
         items = self.get(

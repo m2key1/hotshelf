@@ -51,3 +51,4 @@ details form { margin-top: 0.8rem; }
 .desc { color: #5d6b7a; font-size: 0.75rem; line-height: 1.35; }
 .settings label.check { flex-wrap: wrap; }
 .settings label.check .desc { flex-basis: 100%; margin-left: 1.6rem; }
+.badge.pending { background: #3a3325; color: #d8c69a; }

@@ -121,10 +121,13 @@ def _run(cfg, state):
         _execute(state, mover.demote, "demote", relpath, snapshot.nvme[relpath], dry, moved)
 
     _update_metrics(cfg, snapshot, moved, dry)
+    promoted_now = {w.relpath for w in promotes} if not dry else set()
     summary = {
         "ts": time.time(), "dry_run": dry, "warnings": warnings, **moved,
         "hot": [{"relpath": w.relpath, "size": w.size, "reason": w.reason,
-                 "group": w.group} for w in wants],
+                 "group": w.group,
+                 "tier": "nvme" if w.relpath in snapshot.nvme or w.relpath in promoted_now
+                 else "hdd"} for w in wants],
         "series": [{"key": s.key, "name": s.name, "last_activity": s.last_activity}
                    for s in snapshot.series],
         "movies": sorted(snapshot.movies),
@@ -134,6 +137,7 @@ def _run(cfg, state):
     state.set_kv("last_run", summary)
     state.log("run", detail=f"promoted={moved['promoted']} demoted={moved['demoted']} "
                             f"failed={moved['failed']} dry_run={dry}")
+    state.prune_log(cfg["run"]["log_keep"])
     return summary
 
 

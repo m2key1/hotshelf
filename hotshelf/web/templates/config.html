@@ -86,6 +86,10 @@
       <legend>Run</legend>
       {% call field("Interval (minutes)", "Time between automatic policy runs.") %}
         <input type="number" name="interval_minutes" value="{{ cfg.run.interval_minutes }}" min="1">{% endcall %}
+      {% call field("Webhook debounce (minutes)", "Ignore playback events this soon after a run.") %}
+        <input type="number" name="webhook_debounce_minutes" value="{{ cfg.run.webhook_debounce_minutes }}" min="0">{% endcall %}
+      {% call field("Log entries kept", "Older activity log entries are pruned.") %}
+        <input type="number" name="log_keep" value="{{ cfg.run.log_keep }}" min="100">{% endcall %}
       <label class="check">
         <input type="checkbox" name="dry_run" {{ "checked" if cfg.run.dry_run }}> Dry run
         <span class="desc">Log intended moves without touching any files.</span></label>

@@ -22,7 +22,8 @@ DEFAULTS = {
         "users": [],
         "move_sidecars": True,
     },
-    "run": {"interval_minutes": 15, "dry_run": True},
+    "run": {"interval_minutes": 15, "dry_run": True,
+            "webhook_debounce_minutes": 5, "log_keep": 5000},
 }
 
 

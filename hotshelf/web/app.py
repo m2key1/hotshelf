@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -124,6 +125,7 @@ def settings_save(request: Request,
                   resume: str = Form(), fresh_imports: str = Form(),
                   fresh_keep_days: int = Form(), watched_grace_days: int = Form(),
                   users: str = Form(""), interval_minutes: int = Form(),
+                  webhook_debounce_minutes: int = Form(), log_keep: int = Form(),
                   move_sidecars: str = Form(None), dry_run: str = Form(None),
                   jellyfin_url: str = Form(), union_prefix: str = Form(),
                   api_key: str = Form(""), movies_dir: str = Form(),
@@ -143,7 +145,8 @@ def settings_save(request: Request,
         "move_sidecars": move_sidecars is not None,
     })
     data.setdefault("run", {}).update({
-        "interval_minutes": interval_minutes, "dry_run": dry_run is not None})
+        "interval_minutes": interval_minutes, "dry_run": dry_run is not None,
+        "webhook_debounce_minutes": webhook_debounce_minutes, "log_keep": log_keep})
     jf = data.setdefault("jellyfin", {})
     jf.update({"url": jellyfin_url, "union_prefix": union_prefix})
     if api_key:
@@ -203,10 +206,64 @@ def evict(relpath: str = Form()):
 
 @app.post("/webhook/jellyfin")
 async def jellyfin_webhook(request: Request):
-    """Playback events from Jellyfin trigger an immediate run."""
-    state.log("webhook", detail="jellyfin event")
-    threading.Thread(target=scheduled_run, daemon=True).start()
+    """Playback events: count cache hit or miss, then run policy (debounced)."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    _count_hit(payload.get("ItemId"))
+    last = state.get_kv("last_run", {}).get("ts", 0)
+    debounce = cfg["run"]["webhook_debounce_minutes"] * 60
+    if time.time() - last > debounce:
+        state.log("webhook", detail="jellyfin event, run triggered")
+        threading.Thread(target=scheduled_run, daemon=True).start()
+    else:
+        state.log("webhook", detail="jellyfin event, debounced")
     return {"ok": True}
+
+
+def _count_hit(item_id):
+    """Best-effort: was this playback served from NVMe?"""
+    if not item_id:
+        return
+    from .. import metrics
+    from ..jellyfin import Jellyfin
+    try:
+        jf = Jellyfin(cfg["jellyfin"]["url"], cfg["jellyfin"]["api_key"],
+                      cfg["jellyfin"]["union_prefix"])
+        relpath = jf.item_path(item_id)
+        if not relpath:
+            return
+        if os.path.exists(os.path.join(cfg["branches"]["nvme"], relpath)):
+            metrics.cache_hits.inc()
+        else:
+            metrics.cache_misses.inc()
+    except Exception:
+        pass
+
+
+@app.post("/flush")
+def flush():
+    """Demote everything on NVMe, for rollback or a fresh start."""
+    from ..library import scan
+    from ..mover import Mover
+    files = scan(cfg["branches"]["nvme"], cfg["library"]["video_exts"])
+    if cfg["run"]["dry_run"]:
+        for relpath in sorted(files):
+            state.log("would demote", relpath, files[relpath][0], detail="flush")
+        return RedirectResponse("/log", status_code=303)
+    mover = Mover(cfg["branches"]["nvme"], cfg["branches"]["hdd"],
+                  cfg["policy"]["move_sidecars"],
+                  cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
+    def work():
+        for relpath in sorted(files):
+            try:
+                mover.demote(relpath)
+                state.log("demote", relpath, files[relpath][0], detail="flush")
+            except OSError as exc:
+                state.log("demote", relpath, ok=False, detail=str(exc))
+    threading.Thread(target=work, daemon=True).start()
+    return RedirectResponse("/log", status_code=303)
 
 
 @app.get("/metrics")

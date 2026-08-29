@@ -14,12 +14,14 @@
 <section class="card">
   <h2>Hot set ({{ hot | length }} items)</h2>
   <table>
-    <tr><th>Item</th><th>Group</th><th>Reason</th><th>Size</th><th></th></tr>
+    <tr><th>Item</th><th>Group</th><th>Reason</th><th>Tier</th><th>Size</th><th></th></tr>
     {% for item in hot %}
     <tr>
       <td class="path">{{ item.relpath }}</td>
       <td>{{ item.group }}{% if item.group in pinned %} <span class="badge">pin</span>{% endif %}</td>
       <td>{{ item.reason }}</td>
+      <td>{% if item.get("tier") == "nvme" %}<span class="badge">NVMe</span>
+          {% else %}<span class="badge pending">HDD</span>{% endif %}</td>
       <td>{{ item.size | gb }} GB</td>
       <td>
         <form method="post" action="/evict">
@@ -29,8 +31,16 @@
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="5">No hot items yet. Run the policy once.</td></tr>
+    <tr><td colspan="6">No hot items yet. Run the policy once.</td></tr>
     {% endfor %}
   </table>
+</section>
+<section class="card">
+  <h2>Maintenance</h2>
+  <form method="post" action="/flush"
+        onsubmit="return confirm('Demote every file on NVMe back to HDD?')">
+    <button type="submit">Flush cache</button>
+  </form>
+  <p class="hint">Moves everything back to HDD, verified. Used for rollback or a clean start.</p>
 </section>
 {% endblock %}

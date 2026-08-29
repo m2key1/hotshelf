@@ -50,6 +50,12 @@ class State:
                 "SELECT * FROM log ORDER BY rowid DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in rows]
 
+    def prune_log(self, keep):
+        with self.lock, self.conn:
+            self.conn.execute(
+                "DELETE FROM log WHERE rowid <= "
+                "(SELECT COALESCE(MAX(rowid), 0) FROM log) - ?", (keep,))
+
     def set_kv(self, key, value):
         with self.lock, self.conn:
             self.conn.execute(
