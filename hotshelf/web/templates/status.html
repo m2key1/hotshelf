@@ -1,20 +1,30 @@
 {% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="60">{% endblock %}
 {% block content %}
 {% set used = last.get("cache_used", 0) %}
 {% set budget = cfg.budget.size_gb * 1000000000 %}
+{% set pct = (100 * used / budget) | round(1) if budget else 0 %}
 <section class="card">
   <h2>Cache</h2>
-  <div class="bar"><div class="fill" style="width: {{ [100, (100 * used / budget) if budget else 0] | min }}%"></div></div>
-  <p>{{ used | gb }} GB of
-     {{ (cfg.budget.size_gb ~ " GB budget") if budget else "unlimited budget" }} &middot;
-     {{ last.get("cache_items", 0) }} files on NVMe &middot;
-     last run {{ last.get("ts") | ts }}
-     {% if last.get("dry_run") %}(dry){% endif %}</p>
+  <div class="stats">
+    <div class="stat"><span class="num">{{ used | gb }}</span><span class="unit">GB hot</span></div>
+    <div class="stat"><span class="num">{{ last.get("cache_items", 0) }}</span><span class="unit">files on NVMe</span></div>
+    <div class="stat"><span class="num">{{ hot | length }}</span><span class="unit">in hot set</span></div>
+    <div class="stat"><span class="num">{{ last.get("warnings", []) | length }}</span><span class="unit">warnings</span></div>
+    <div class="stat"><span class="num">{{ last.get("ts") | ts }}</span><span class="unit">last run{{ " (dry)" if last.get("dry_run") }}</span></div>
+  </div>
+  <div class="bar {{ 'warn' if pct > 75 }} {{ 'crit' if pct > 92 }}">
+    <div class="fill" style="width: {{ [100, pct] | min }}%"></div>
+  </div>
+  <p class="hint">
+    {% if budget %}{{ pct }}% of {{ cfg.budget.size_gb }} GB budget{% else %}no budget limit{% endif %}
+  </p>
 </section>
 <section class="card">
-  <h2>Hot set ({{ hot | length }} items)</h2>
+  <h2>Hot set</h2>
+  <div class="scroll">
   <table>
-    <tr><th>Item</th><th>Group</th><th>Reason</th><th>Tier</th><th>Size</th><th></th></tr>
+    <tr><th>Item</th><th>Group</th><th>Reason</th><th>Tier</th><th class="r">Size</th><th></th></tr>
     {% for item in hot %}
     <tr>
       <td class="path">{{ item.relpath }}</td>
@@ -22,18 +32,19 @@
       <td>{{ item.reason }}</td>
       <td>{% if item.get("tier") == "nvme" %}<span class="badge">NVMe</span>
           {% else %}<span class="badge pending">HDD</span>{% endif %}</td>
-      <td>{{ item.size | gb }} GB</td>
+      <td class="r">{{ item.size | gb }} GB</td>
       <td>
         <form method="post" action="/evict">
           <input type="hidden" name="relpath" value="{{ item.relpath }}">
-          <button type="submit">evict</button>
+          <button type="submit" class="small">evict</button>
         </form>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="6">No hot items yet. Run the policy once.</td></tr>
+    <tr><td colspan="6" class="empty">No hot items yet. Press Run now to compute the first plan.</td></tr>
     {% endfor %}
   </table>
+  </div>
 </section>
 <section class="card">
   <h2>Maintenance</h2>

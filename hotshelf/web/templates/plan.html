@@ -1,26 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
 {% if error %}<section class="card error"><h2>Error</h2><p>{{ error }}</p></section>{% endif %}
+{% set promote_gb = promotes | sum(attribute="size") %}
 <section class="card">
-  <h2>Would promote ({{ promotes | length }})</h2>
+  <h2>Would promote &middot; {{ promotes | length }} items &middot; {{ promote_gb | gb }} GB</h2>
+  <div class="scroll">
   <table>
     {% for w in promotes %}
-    <tr><td class="path">{{ w.relpath }}</td><td>{{ w.reason }}</td><td>{{ w.size | gb }} GB</td></tr>
-    {% else %}<tr><td>Nothing to promote.</td></tr>{% endfor %}
+    <tr><td class="path">{{ w.relpath }}</td><td>{{ w.reason }}</td>
+        <td class="r">{{ w.size | gb }} GB</td></tr>
+    {% else %}<tr><td class="empty">Nothing to promote.</td></tr>{% endfor %}
   </table>
+  </div>
 </section>
 <section class="card">
-  <h2>Would demote ({{ demotes | length }})</h2>
+  <h2>Would demote &middot; {{ demotes | length }} items</h2>
+  <div class="scroll">
   <table>
     {% for relpath in demotes %}
     <tr><td class="path">{{ relpath }}</td></tr>
-    {% else %}<tr><td>Nothing to demote.</td></tr>{% endfor %}
+    {% else %}<tr><td class="empty">Nothing to demote.</td></tr>{% endfor %}
   </table>
+  </div>
 </section>
 {% if warnings %}
 <section class="card">
   <h2>Warnings</h2>
-  <table>{% for w in warnings %}<tr><td>{{ w }}</td></tr>{% endfor %}</table>
+  <table>{% for w in warnings %}<tr><td class="err">{{ w }}</td></tr>{% endfor %}</table>
 </section>
 {% endif %}
 {% endblock %}

@@ -2,16 +2,22 @@
 {% block content %}
 <section class="card">
   <h2>Activity</h2>
+  <div class="scroll">
   <table>
-    <tr><th>Time</th><th>Action</th><th>Item</th><th>Size</th><th>Detail</th></tr>
+    <tr><th>Time</th><th>Action</th><th>Item</th><th class="r">Size</th><th>Detail</th></tr>
     {% for e in entries %}
+    {% set kind = "ok" if e.action in ("promote",) else
+                  "warn" if e.action in ("demote", "would promote", "would demote") else
+                  "err" if e.action == "warning" or not e.ok else "" %}
     <tr class="{{ 'err' if not e.ok }}">
-      <td>{{ e.ts }}</td><td>{{ e.action }}</td>
+      <td class="mono">{{ e.ts | replace("T", " ") | replace("+00:00", "") }}</td>
+      <td><span class="tag {{ kind }}">{{ e.action }}</span></td>
       <td class="path">{{ e.relpath }}</td>
-      <td>{{ e.bytes | gb if e.bytes else "" }}</td>
-      <td>{{ e.detail }}</td>
+      <td class="r">{{ e.bytes | gb if e.bytes else "" }}</td>
+      <td class="detail">{{ e.detail }}</td>
     </tr>
-    {% else %}<tr><td colspan="5">No activity yet.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="5" class="empty">No activity yet.</td></tr>{% endfor %}
   </table>
+  </div>
 </section>
 {% endblock %}
