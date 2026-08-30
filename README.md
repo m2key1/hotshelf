@@ -46,6 +46,15 @@ Options=category.create=ff,moveonenospc=true,cache.files=off,dropcacheonclose=fa
 WantedBy=multi-user.target
 ```
 
+Order Docker after the union so containers never start against an empty
+library, `/etc/systemd/system/docker.service.d/after-media-union.conf`:
+
+```
+[Unit]
+After=data-media.mount
+Wants=data-media.mount
+```
+
 ```
 apt install mergerfs
 systemctl daemon-reload
