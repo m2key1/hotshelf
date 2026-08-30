@@ -2,6 +2,7 @@
 name = "hotshelf"
 version = "0.1.0"
 description = "Tiered media storage mover for Jellyfin"
+license = {file = "LICENSE"}
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",

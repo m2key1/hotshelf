@@ -14,7 +14,7 @@ SETTINGS = {
     "budget_mode": "size", "size_gb": "120", "max_titles": "8",
     "activity_window_days": "21", "episodes_ahead": "season", "resume": "recent",
     "fresh_imports": "keep", "fresh_keep_days": "10", "watched_grace_days": "5",
-    "users": "M2key1, Villach", "interval_minutes": "30",
+    "users": "alice, bob", "interval_minutes": "30",
     "webhook_debounce_minutes": "5", "log_keep": "5000", "dry_run": "on",
     "jellyfin_url": "http://jellyfin:8096", "union_prefix": "/data/media",
     "movies_dir": "movies", "video_exts": ".mkv, mp4",
