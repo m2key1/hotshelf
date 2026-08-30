@@ -1,13 +1,13 @@
 # hotshelf
 
 Tiered media storage for Jellyfin. Keeps what the household is actually
-watching on NVMe; everything else stays on HDD. All apps see one library
+watching on fast storage; everything else stays on the slow branch. All apps see one library
 through a mergerfs union, so files move between tiers invisibly.
 
 ## Requirements
 
 - Jellyfin, media library on a slow pool (e.g. `/data/media`)
-- A fast filesystem for the cache (e.g. ZFS on NVMe)
+- A fast filesystem for the cache branch (SSD/NVMe) and a slow one for the bulk library
 - Docker with a reverse-proxy network (optional)
 
 ## Setup
@@ -24,7 +24,7 @@ chown 1000:1000 /fast/media-cache
 
 ```
 docker stop jellyfin sonarr radarr sabnzbd
-zfs set mountpoint=/data/media-hdd media/media
+zfs set mountpoint=/data/media-slow media/media
 mkdir /data/media
 ```
 
@@ -37,7 +37,7 @@ After=zfs-mount.service
 Requires=zfs-mount.service
 
 [Mount]
-What=/fast/media-cache:/data/media-hdd
+What=/fast/media-cache:/data/media-slow
 Where=/data/media
 Type=fuse.mergerfs
 Options=category.create=ff,moveonenospc=true,cache.files=off,dropcacheonclose=false,allow_other,use_ino
@@ -63,7 +63,7 @@ docker start jellyfin sonarr radarr sabnzbd
 ```
 
 Every media app must mount the union path, never a branch.
-`category.create=ff` makes new downloads land on NVMe automatically.
+`category.create=ff` makes new downloads land on the fast branch automatically.
 
 4. App:
 
@@ -115,8 +115,8 @@ Homepage widget:
 
 ## Rollback
 
-Press Flush cache (moves everything back to HDD), stop the app, repoint the
-containers to `/data/media-hdd`, disable the mount unit, rename the
+Press Flush cache (moves everything back to the slow branch), stop the app, repoint the
+containers to `/data/media-slow`, disable the mount unit, rename the
 mountpoint back.
 
 ## Tests

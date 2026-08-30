@@ -9,12 +9,12 @@ chown 1000:1000 /fast/media-cache
 
 Quota is the hard backstop; the app budget stays below it.
 
-## 2. Rename the HDD branch
+## 2. Rename the slow branch
 
 The current library moves aside so the union can take its path:
 
 ```
-zfs set mountpoint=/data/media-hdd media/media
+zfs set mountpoint=/data/media-slow media/media
 ```
 
 ## 3. mergerfs union
@@ -32,7 +32,7 @@ After=zfs-mount.service
 Requires=zfs-mount.service
 
 [Mount]
-What=/fast/media-cache:/data/media-hdd
+What=/fast/media-cache:/data/media-slow
 Where=/data/media
 Type=fuse.mergerfs
 Options=category.create=ff,cache.files=off,dropcacheonclose=false,allow_other,use_ino
@@ -41,7 +41,7 @@ Options=category.create=ff,cache.files=off,dropcacheonclose=false,allow_other,us
 WantedBy=multi-user.target
 ```
 
-`category.create=ff` makes new imports land on NVMe first.
+`category.create=ff` makes new imports land on the fast branch first.
 
 ## 4. Repoint containers
 
@@ -52,5 +52,5 @@ Jellyfin can mount it read-only.
 ## 5. Rollback
 
 Stop hotshelf, press the demote-everything path (set budget to 0 and run),
-repoint the containers back to `/data/media-hdd`, disable the mount unit,
+repoint the containers back to `/data/media-slow`, disable the mount unit,
 rename the mountpoint back.
