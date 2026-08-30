@@ -74,3 +74,22 @@ def test_desired_accepts_config_object(tmp_path):
     (tmp_path / "c.yaml").write_text("")
     cfg = Config(str(tmp_path / "c.yaml"))
     assert desired(Snapshot(), cfg, []) == []
+
+
+def test_move_window():
+    from datetime import datetime
+
+    from hotshelf.runner import in_move_window
+
+    def cfg(enabled, start="02:00", end="07:00"):
+        return {"run": {"move_window_enabled": enabled,
+                        "move_window_start": start, "move_window_end": end}}
+
+    at = lambda h, m: datetime(2026, 8, 30, h, m)
+    assert in_move_window(cfg(False), at(12, 0))
+    assert in_move_window(cfg(True), at(3, 30))
+    assert not in_move_window(cfg(True), at(12, 0))
+    assert not in_move_window(cfg(True), at(7, 0))
+    assert in_move_window(cfg(True, "22:00", "06:00"), at(23, 30))
+    assert in_move_window(cfg(True, "22:00", "06:00"), at(2, 0))
+    assert not in_move_window(cfg(True, "22:00", "06:00"), at(12, 0))

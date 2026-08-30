@@ -16,7 +16,7 @@ CFG = {
         "users": [],
         "move_sidecars": True,
     },
-    "budget": {"mode": "size", "size_gb": 100, "max_series": 10, "max_movies": 5},
+    "budget": {"mode": "size", "size_gb": 100, "max_titles": 15},
 }
 
 
@@ -111,7 +111,7 @@ def test_count_budget():
         series("s2", 4, {"d": 0}, last_activity="2026-08-28"),
         series("s3", 4, {"d": 0}, last_activity="2026-08-27"),
     ])
-    cfg = {**CFG, "budget": {**CFG["budget"], "mode": "count", "max_series": 2}}
+    cfg = {**CFG, "budget": {**CFG["budget"], "mode": "count", "max_titles": 2}}
     groups = {w.group for w in desired(snap, cfg, [], NOW)}
     assert groups == {"s1", "s2"}
 
@@ -155,6 +155,5 @@ def test_no_limit_budgets():
     snap = Snapshot(series=[series(f"s{i}", 4, {"d": 0}) for i in range(5)])
     nolimit = {**CFG, "budget": {**CFG["budget"], "size_gb": 0}}
     assert len(desired(snap, nolimit, [], NOW)) == 10
-    counts = {**CFG, "budget": {**CFG["budget"], "mode": "count",
-                                "max_series": 0, "max_movies": 0}}
+    counts = {**CFG, "budget": {**CFG["budget"], "mode": "count", "max_titles": 0}}
     assert len(desired(snap, counts, [], NOW)) == 10

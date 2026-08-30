@@ -150,15 +150,14 @@ def _trim(wants, budget, used):
             used += w.size
             kept.append(w)
         return kept
-    series_seen, movies_seen, kept = [], [], []
-    movies_prefix = budget.get("movies_dir", "movies") + "/"
+    limit = budget["max_titles"]
+    titles, kept = [], []
     for w in wants:
-        bucket = movies_seen if w.relpath.startswith(movies_prefix) else series_seen
-        limit = budget["max_movies"] if bucket is movies_seen else budget["max_series"]
-        if w.group not in bucket:
-            if limit and len(bucket) >= limit:
+        title = w.group or "/".join(w.relpath.split("/")[:2])
+        if title not in titles:
+            if limit and len(titles) >= limit:
                 continue
-            bucket.append(w.group)
+            titles.append(title)
         kept.append(w)
     return kept
 

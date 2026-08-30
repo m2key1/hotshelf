@@ -140,13 +140,16 @@ def config_save(request: Request, raw: str = Form()):
 
 @app.post("/settings", response_class=HTMLResponse)
 def settings_save(request: Request,
-                  budget_mode: str = Form(), size_gb: int = Form(),
-                  max_series: int = Form(), max_movies: int = Form(),
+                  budget_mode: str = Form(), size_gb: int = Form(0),
+                  max_titles: int = Form(0),
                   activity_window_days: int = Form(), episodes_ahead: str = Form(),
                   resume: str = Form(), fresh_imports: str = Form(),
                   fresh_keep_days: int = Form(), watched_grace_days: int = Form(),
                   users: str = Form(""), interval_minutes: int = Form(),
                   webhook_debounce_minutes: int = Form(), log_keep: int = Form(),
+                  move_window_enabled: str = Form(None),
+                  move_window_start: str = Form("02:00"),
+                  move_window_end: str = Form("07:00"),
                   move_sidecars: str = Form(None), dry_run: str = Form(None),
                   jellyfin_url: str = Form(), union_prefix: str = Form(),
                   api_key: str = Form(""), movies_dir: str = Form(),
@@ -157,7 +160,7 @@ def settings_save(request: Request,
     data = yaml.safe_load(cfg.raw()) or {}
     ahead = episodes_ahead if episodes_ahead in ("season", "series") else int(episodes_ahead)
     data["budget"] = {"mode": budget_mode, "size_gb": size_gb,
-                      "max_series": max_series, "max_movies": max_movies}
+                      "max_titles": max_titles}
     data.setdefault("policy", {}).update({
         "activity_window_days": activity_window_days, "episodes_ahead": ahead,
         "resume": resume, "fresh_imports": fresh_imports,
@@ -167,7 +170,10 @@ def settings_save(request: Request,
     })
     data.setdefault("run", {}).update({
         "interval_minutes": interval_minutes, "dry_run": dry_run is not None,
-        "webhook_debounce_minutes": webhook_debounce_minutes, "log_keep": log_keep})
+        "webhook_debounce_minutes": webhook_debounce_minutes, "log_keep": log_keep,
+        "move_window_enabled": move_window_enabled is not None,
+        "move_window_start": move_window_start,
+        "move_window_end": move_window_end})
     jf = data.setdefault("jellyfin", {})
     jf.update({"url": jellyfin_url, "union_prefix": union_prefix})
     if api_key:
@@ -192,11 +198,20 @@ def log_view(request: Request):
     return page(request, "log.html", entries=state.log_entries())
 
 
+def urgent_run():
+    """A user- or playback-triggered run that ignores the move window."""
+    try:
+        cfg.reload()
+        runner.run(cfg, state, urgent=True)
+    except Exception as exc:
+        state.log("error", detail=f"urgent run failed: {exc}")
+
+
 @app.post("/run")
 def run_now():
     if runner.run_lock.locked():
         return RedirectResponse("/", status_code=303)
-    threading.Thread(target=scheduled_run, daemon=True).start()
+    threading.Thread(target=urgent_run, daemon=True).start()
     return RedirectResponse("/log", status_code=303)
 
 
@@ -241,7 +256,7 @@ async def jellyfin_webhook(request: Request):
         state.log("webhook", detail="jellyfin event, run already in progress")
     elif time.time() - last > debounce:
         state.log("webhook", detail="jellyfin event, run triggered")
-        threading.Thread(target=scheduled_run, daemon=True).start()
+        threading.Thread(target=urgent_run, daemon=True).start()
     else:
         state.log("webhook", detail="jellyfin event, debounced")
     return {"ok": True}

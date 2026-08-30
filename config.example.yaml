@@ -10,8 +10,7 @@ branches:
 budget:
   mode: size
   size_gb: 150
-  max_series: 10
-  max_movies: 5
+  max_titles: 15
 
 policy:
   activity_window_days: 30
@@ -26,6 +25,9 @@ policy:
 run:
   interval_minutes: 15
   dry_run: true
+  move_window_enabled: false
+  move_window_start: "02:00"
+  move_window_end: "07:00"
 
 library:
   movies_dir: movies

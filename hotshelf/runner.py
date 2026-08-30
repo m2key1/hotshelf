@@ -1,5 +1,6 @@
 import threading
 import time
+from datetime import datetime
 
 from . import metrics
 from .jellyfin import Jellyfin
@@ -95,22 +96,38 @@ def compute(cfg, state):
     return snapshot, wants, promotes, demotes, warnings
 
 
-def run(cfg, state):
-    """One full policy run; respects dry_run. Returns a summary dict."""
+def in_move_window(cfg, now=None):
+    """True when moves are allowed: window disabled, or local time inside it."""
+    rw = cfg["run"]
+    if not rw["move_window_enabled"]:
+        return True
+    current_hm = (now or datetime.now()).strftime("%H:%M")
+    start, end = rw["move_window_start"], rw["move_window_end"]
+    if start <= end:
+        return start <= current_hm < end
+    return current_hm >= start or current_hm < end
+
+
+def run(cfg, state, urgent=False):
+    """One full policy run; respects dry_run. Urgent runs ignore the move window."""
     if not run_lock.acquire(blocking=False):
         return {"skipped": "run already in progress"}
     current.update(active=True, started=time.time(), done=0, total=0)
     try:
-        return _run(cfg, state)
+        return _run(cfg, state, urgent)
     finally:
         current["active"] = False
         run_lock.release()
 
 
-def _run(cfg, state):
+def _run(cfg, state, urgent):
     """The actual run body, called under run_lock."""
     dry = cfg["run"]["dry_run"]
     snapshot, wants, promotes, demotes, warnings = compute(cfg, state)
+    deferred = 0
+    if not urgent and not in_move_window(cfg):
+        deferred = len(promotes) + len(demotes)
+        promotes, demotes = [], []
     mover = Mover(cfg["branches"]["fast"], cfg["branches"]["slow"],
                   cfg["policy"]["move_sidecars"],
                   cfg["mover"]["verify"], cfg["mover"]["free_space_margin_gb"])
@@ -127,7 +144,8 @@ def _run(cfg, state):
     _update_metrics(cfg, snapshot, moved, dry)
     promoted_now = {w.relpath for w in promotes} if not dry else set()
     summary = {
-        "ts": time.time(), "dry_run": dry, "warnings": warnings, **moved,
+        "ts": time.time(), "dry_run": dry, "warnings": warnings,
+        "deferred": deferred, **moved,
         "hot": [{"relpath": w.relpath, "size": w.size, "reason": w.reason,
                  "group": w.group,
                  "tier": "fast" if w.relpath in snapshot.fast or w.relpath in promoted_now
@@ -140,7 +158,9 @@ def _run(cfg, state):
     }
     state.set_kv("last_run", summary)
     state.log("run", detail=f"promoted={moved['promoted']} demoted={moved['demoted']} "
-                            f"failed={moved['failed']} dry_run={dry}")
+                            f"failed={moved['failed']} dry_run={dry}"
+                            + (f" deferred={deferred} (outside move window)"
+                               if deferred else ""))
     state.prune_log(cfg["run"]["log_keep"])
     return summary
 

@@ -11,7 +11,7 @@ def client():
 
 
 SETTINGS = {
-    "budget_mode": "size", "size_gb": "120", "max_series": "8", "max_movies": "3",
+    "budget_mode": "size", "size_gb": "120", "max_titles": "8",
     "activity_window_days": "21", "episodes_ahead": "season", "resume": "recent",
     "fresh_imports": "keep", "fresh_keep_days": "10", "watched_grace_days": "5",
     "users": "M2key1, Villach", "interval_minutes": "30",

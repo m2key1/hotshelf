@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 
 import yaml
 
@@ -11,7 +12,7 @@ DEFAULTS = {
         "video_exts": [".mkv", ".mp4", ".avi", ".m4v", ".ts", ".webm", ".mov", ".wmv"],
     },
     "mover": {"verify": "checksum", "free_space_margin_gb": 1},
-    "budget": {"mode": "size", "size_gb": 150, "max_series": 10, "max_movies": 5},
+    "budget": {"mode": "size", "size_gb": 150, "max_titles": 15},
     "policy": {
         "activity_window_days": 30,
         "episodes_ahead": 3,
@@ -23,7 +24,9 @@ DEFAULTS = {
         "move_sidecars": True,
     },
     "run": {"interval_minutes": 15, "dry_run": True,
-            "webhook_debounce_minutes": 5, "log_keep": 5000},
+            "webhook_debounce_minutes": 5, "log_keep": 5000,
+            "move_window_enabled": False,
+            "move_window_start": "02:00", "move_window_end": "07:00"},
 }
 
 
@@ -67,6 +70,9 @@ class Config:
             raise ValueError("policy.resume must be recent, always or off")
         if data["mover"]["verify"] not in ("checksum", "size"):
             raise ValueError("mover.verify must be checksum or size")
+        for key in ("move_window_start", "move_window_end"):
+            if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", str(data["run"][key])):
+                raise ValueError(f"run.{key} must be HH:MM")
         ahead = data["policy"]["episodes_ahead"]
         if not (ahead in ("season", "series") or isinstance(ahead, int) and ahead > 0):
             raise ValueError("policy.episodes_ahead must be a positive int, season or series")

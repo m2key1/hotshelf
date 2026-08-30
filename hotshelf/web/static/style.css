@@ -84,3 +84,4 @@ details form { margin-top: 0.8rem; }
 button[disabled] { opacity: 0.5; cursor: default; }
 button[disabled]:hover { border-color: #313a45; }
 @keyframes pulse { 50% { opacity: 0.55; } }
+.hidden { display: none; }

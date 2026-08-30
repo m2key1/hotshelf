@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% macro field(label, desc) %}
-  <label>{{ label }}{{ caller() }}<span class="desc">{{ desc }}</span></label>
+{% macro field(label, desc, show_if=None) %}
+  <label {% if show_if %}data-show-if="{{ show_if }}"{% endif %}>
+    {{ label }}{{ caller() }}<span class="desc">{{ desc }}</span></label>
 {% endmacro %}
 {% block content %}
 {% set pol = cfg.policy %}
@@ -17,12 +18,10 @@
           <option value="size" {{ "selected" if bud.mode == "size" }}>by size</option>
           <option value="count" {{ "selected" if bud.mode == "count" }}>by count</option>
         </select>{% endcall %}
-      {% call field("Size (GB)", "Total space the cache may use. 0 = no limit.") %}
+      {% call field("Size (GB)", "Total space the cache may use. 0 = no limit.", "budget_mode=size") %}
         <input type="number" name="size_gb" value="{{ bud.size_gb }}" min="0">{% endcall %}
-      {% call field("Max series", "Series kept hot at once in count mode. 0 = no limit.") %}
-        <input type="number" name="max_series" value="{{ bud.max_series }}" min="0">{% endcall %}
-      {% call field("Max movies", "Movies kept hot at once in count mode. 0 = no limit.") %}
-        <input type="number" name="max_movies" value="{{ bud.max_movies }}" min="0">{% endcall %}
+      {% call field("Max titles", "Distinct series or movies kept hot at once. 0 = no limit.", "budget_mode=count") %}
+        <input type="number" name="max_titles" value="{{ bud.max_titles }}" min="0">{% endcall %}
     </fieldset>
     <fieldset>
       <legend>Policy</legend>
@@ -46,7 +45,7 @@
           <option value="keep" {{ "selected" if pol.fresh_imports == "keep" }}>keep on fast</option>
           <option value="demote" {{ "selected" if pol.fresh_imports == "demote" }}>demote next run</option>
         </select>{% endcall %}
-      {% call field("Fresh kept (days)", "How long unwatched new imports stay hot.") %}
+      {% call field("Fresh kept (days)", "How long unwatched new imports stay hot.", "fresh_imports=keep") %}
         <input type="number" name="fresh_keep_days" value="{{ pol.fresh_keep_days }}" min="1">{% endcall %}
       {% call field("Watched grace (days)", "Keep just-watched episodes this long, for others catching up. 0 = off.") %}
         <input type="number" name="watched_grace_days" value="{{ pol.watched_grace_days }}" min="0">{% endcall %}
@@ -91,6 +90,13 @@
       {% call field("Log entries kept", "Older activity log entries are pruned.") %}
         <input type="number" name="log_keep" value="{{ cfg.run.log_keep }}" min="100">{% endcall %}
       <label class="check">
+        <input type="checkbox" name="move_window_enabled" {{ "checked" if cfg.run.move_window_enabled }}> Move window
+        <span class="desc">Scheduled runs only move files inside this window. Playback events and Run now always move immediately.</span></label>
+      {% call field("Window start", "Local time moves may begin.", "move_window_enabled=true") %}
+        <input type="time" name="move_window_start" value="{{ cfg.run.move_window_start }}">{% endcall %}
+      {% call field("Window end", "Local time moves stop. May wrap past midnight.", "move_window_enabled=true") %}
+        <input type="time" name="move_window_end" value="{{ cfg.run.move_window_end }}">{% endcall %}
+      <label class="check">
         <input type="checkbox" name="dry_run" {{ "checked" if cfg.run.dry_run }}> Dry run
         <span class="desc">Log intended moves without touching any files.</span></label>
     </fieldset>
@@ -106,4 +112,17 @@
     </form>
   </details>
 </section>
+<script>
+function syncVisibility() {
+  document.querySelectorAll("[data-show-if]").forEach(function (el) {
+    var rule = el.dataset.showIf.split("=");
+    var src = document.querySelector('[name="' + rule[0] + '"]');
+    if (!src) return;
+    var value = src.type === "checkbox" ? String(src.checked) : src.value;
+    el.classList.toggle("hidden", value !== rule[1]);
+  });
+}
+document.addEventListener("change", syncVisibility);
+syncVisibility();
+</script>
 {% endblock %}

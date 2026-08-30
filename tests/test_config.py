@@ -51,3 +51,10 @@ def test_config_supports_get_like_a_mapping(tmp_path):
     cfg = make(tmp_path)
     assert cfg.get("library")["movies_dir"] == "movies"
     assert cfg.get("missing", 7) == 7
+
+
+def test_move_window_validation(tmp_path):
+    with pytest.raises(ValueError, match="HH:MM"):
+        make(tmp_path, 'run:\n  move_window_start: "25:00"\n')
+    cfg = make(tmp_path, 'run:\n  move_window_start: "23:30"\n')
+    assert cfg["run"]["move_window_start"] == "23:30"
