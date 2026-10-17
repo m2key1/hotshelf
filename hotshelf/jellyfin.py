@@ -9,7 +9,9 @@ class Jellyfin:
     def __init__(self, url, api_key, union_prefix):
         self.union_prefix = union_prefix.rstrip("/")
         self.client = httpx.Client(
-            base_url=url, headers={"X-Emby-Token": api_key}, timeout=30
+            base_url=url,
+            headers={"Authorization": f'MediaBrowser Token="{api_key}"'},
+            timeout=30,
         )
 
     def get(self, path, **params):
